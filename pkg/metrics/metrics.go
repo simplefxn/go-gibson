@@ -11,7 +11,9 @@ import (
 )
 
 var (
-	SSEEventCounter atomic.Uint64
+	SSEEventCounter      atomic.Uint64
+	ConsumerEventCounter atomic.Uint64
+	ProducerEventCounter atomic.Uint64
 )
 
 type Server struct {

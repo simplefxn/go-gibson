@@ -212,8 +212,8 @@ func (c *Client) Start(cb func(*SSE_RIS)) {
 				ticker.Stop()
 				break outside_cb
 			// If we receive a message, call back to user function
-			case ris := <-recvChan:
-				cb(ris)
+			case msg := <-recvChan:
+				cb(msg)
 			case <-ticker.C:
 				x := metrics.SSEEventCounter.Load()
 				logger.Log.Infof("Rate %s msg/int", strconv.FormatUint(x, 10))

@@ -4,6 +4,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
+	"log"
 	"os"
 	"strings"
 	"time"
@@ -13,6 +14,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
+	"go.uber.org/zap/zapcore"
 )
 
 const EnvPrefix = "GO_GIBSON"
@@ -23,16 +25,21 @@ var (
 )
 
 type Service struct {
-	Metrics        Metrics
-	ReportInterval time.Duration
-	Sarama         *sarama.Config
-	Others         *SaramaComplex
+	Metrics Metrics
+	Sarama  *sarama.Config
+	Others  *SaramaComplex
+	Globals Globals
 }
 
 type Metrics struct {
 	Enable bool
 	Port   int
 	Path   string
+}
+
+type Globals struct {
+	ReportInterval time.Duration
+	LogLevel       string
 }
 
 type SaramaComplex struct {
@@ -228,6 +235,44 @@ func CreateTlsConfiguration(conf *Service) (t *tls.Config) {
 	return t
 }
 
+func SetLogLevel(cmd *cobra.Command) error {
+	logLevel, err := cmd.Flags().GetString("log.level")
+	if err != nil {
+		return err
+	}
+	switch strings.ToLower(logLevel) {
+	case "debug":
+		logger.Log.Info("Setting log level to debug")
+		logger.SetLogLevel(zapcore.DebugLevel)
+	case "info":
+		logger.Log.Info("Setting log level to info")
+		logger.SetLogLevel(zapcore.InfoLevel)
+	case "warn":
+		logger.Log.Info("Setting log level to warn")
+		logger.SetLogLevel(zapcore.WarnLevel)
+	case "error":
+		logger.Log.Info("Setting log level to error")
+		logger.SetLogLevel(zapcore.ErrorLevel)
+	case "fatal":
+		logger.Log.Info("Setting log level to fatal")
+		logger.SetLogLevel(zapcore.FatalLevel)
+	case "panic":
+		logger.Log.Info("Setting log level to panic")
+		logger.SetLogLevel(zapcore.PanicLevel)
+	default:
+		log.Fatal("Dont know this log level:", logLevel, "known levels are: debug, info, warn, error, fatal, panic")
+	}
+	return nil
+}
+
+func Dump(cmd *cobra.Command) {
+	v := viper.GetViper()
+	cmd.Flags().VisitAll(func(f *pflag.Flag) {
+		val := v.Get(f.Name)
+		logger.Log.Debugf("%s:%s", f.Name, fmt.Sprintf("%v", val))
+	})
+}
+
 // Bind each cobra flag to its associated viper configuration (config file and environment variable)
 func BindFlags(cmd *cobra.Command, v *viper.Viper) {
 	cmd.Flags().VisitAll(func(f *pflag.Flag) {
@@ -241,8 +286,6 @@ func BindFlags(cmd *cobra.Command, v *viper.Viper) {
 		// Apply the viper config value to the flag when the flag is not set and viper has a value
 		if !f.Changed && v.IsSet(f.Name) {
 			val := v.Get(f.Name)
-			logger.Log.Debugf("%v:", f.Name)
-			logger.Log.Debugf("%v\n", val)
 			cmd.Flags().Set(f.Name, fmt.Sprintf("%v", val))
 		}
 	})

@@ -11,7 +11,9 @@ func GetGenericFlags() *pflag.FlagSet {
 	defaults := pflag.NewFlagSet("defaults for all commands", pflag.ExitOnError)
 	defaults.StringVar(&cfgFile, "config", "", "config file (default is $HOME/.kafkaLoad.yaml)")
 
-	defaults.DurationVar(&globalConf.ReportInterval, "interval", 10*time.Second, "monitoring interval(60 seconds)")
+	defaults.StringVar(&globalConf.Globals.LogLevel, "log.level", "info", "verbosity of logs, known levels are: debug, info, warn, error, fatal, panic")
+
+	defaults.DurationVar(&globalConf.Globals.ReportInterval, "interval", 60*time.Second, "monitoring interval(60 seconds)")
 
 	defaults.StringVar(&globalConf.Others.Net.Host, "kafka.broker", "cluster-kafka.kafka.svc", "host to connect or bind the socket")
 
@@ -30,14 +32,19 @@ func GetGenericFlags() *pflag.FlagSet {
 	// Kafka.verifyssl Optional verify ssl certificates chain
 	defaults.BoolVar(&globalConf.Others.Net.VerifySSL, "kafka.verifyssl", true, "Optional verify ssl certificates chain")
 
+	return defaults
+}
+
+func GetMetricsFlags() *pflag.FlagSet {
+	flags := pflag.NewFlagSet("Metrics parameters", pflag.ExitOnError)
 	// Enable prometheus stats
-	defaults.BoolVar(&globalConf.Metrics.Enable, "metrics.enable", true, "enable prometheus metrics")
+	flags.BoolVar(&globalConf.Metrics.Enable, "metrics.enable", true, "enable prometheus metrics")
 
 	// Prometheus metrics port to listen to
-	defaults.IntVar(&globalConf.Metrics.Port, "metrics.port", 8080, "Port to liste for prometheus metrics scraping")
-	defaults.StringVar(&globalConf.Metrics.Path, "metrics.path", "/metrics", "Path for prometheus metrics scraping ")
+	flags.IntVar(&globalConf.Metrics.Port, "metrics.port", 8080, "Port to liste for prometheus metrics scraping")
+	flags.StringVar(&globalConf.Metrics.Path, "metrics.path", "/metrics", "Path for prometheus metrics scraping ")
 
-	return defaults
+	return flags
 }
 
 func GetProducerFlags() *pflag.FlagSet {

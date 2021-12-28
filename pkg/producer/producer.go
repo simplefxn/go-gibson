@@ -6,18 +6,47 @@ import (
 	"github.com/Shopify/sarama"
 	"github.com/simplefxn/go-gibson/pkg/config"
 	"github.com/simplefxn/go-gibson/pkg/logger"
+	"github.com/simplefxn/go-gibson/pkg/metrics"
+	"github.com/spf13/cobra"
 )
 
 type Gibson struct {
 	producer sarama.AsyncProducer
 }
 
-func New(conf *config.Service) *Gibson {
-	risProducer := Gibson{
+func New(cmd *cobra.Command, conf *config.Service) (*Gibson, error) {
+	config.SetLogLevel(cmd)
+
+	producer := Gibson{
 		producer: newProducer(conf),
 	}
 
-	return &risProducer
+	compression, err := cmd.Flags().GetString("kafka.producer.compression")
+	if err != nil {
+		return nil, err
+	}
+	config.Get().Sarama.Producer.Compression = config.ParseCompression(compression)
+
+	partitioner, err := cmd.Flags().GetString("kafka.producer.partitioner")
+	if err != nil {
+		return nil, err
+	}
+
+	config.Get().Sarama.Producer.Partitioner = config.ParsePartitioner(partitioner)
+
+	version, err := cmd.Flags().GetString("kafka.version")
+	if err != nil {
+		return nil, err
+	}
+
+	config.Get().Sarama.Version = *config.ParseVersion(version)
+
+	// Initialize metrics counter
+	metrics.ProducerEventCounter.Store(0)
+
+	config.Dump(cmd)
+
+	return &producer, nil
 }
 
 func (r Gibson) Input() chan<- *sarama.ProducerMessage {

@@ -9,6 +9,8 @@ import (
 	"github.com/Shopify/sarama"
 	"github.com/simplefxn/go-gibson/pkg/config"
 	"github.com/simplefxn/go-gibson/pkg/logger"
+	"github.com/simplefxn/go-gibson/pkg/metrics"
+	"github.com/spf13/cobra"
 )
 
 // Consumer represents a Sarama consumer group consumer
@@ -20,9 +22,41 @@ type Gibson struct {
 	callback func(msg string) error
 }
 
-func New(ctx context.Context, conf *config.Service, callback func(msg string) error) (*Gibson, error) {
+func New(ctx context.Context, cmd *cobra.Command, conf *config.Service, callback func(msg string) error) (*Gibson, error) {
+
+	config.SetLogLevel(cmd)
 
 	sarama.Logger = logger.NewSaramaLogger(logger.GetLogger())
+
+	rebalance, err := cmd.Flags().GetString("kafka.consumer.group.rebalance.strategy")
+	if err != nil {
+		return nil, err
+	}
+
+	config.Get().Sarama.Consumer.Group.Rebalance.Strategy = config.ParseBalanceStrategy(rebalance)
+
+	isolation, err := cmd.Flags().GetString("kafka.consumer.isolationlevel")
+	if err != nil {
+		return nil, err
+	}
+
+	config.Get().Sarama.Consumer.IsolationLevel = config.ParseIsolation(isolation)
+
+	version, err := cmd.Flags().GetString("kafka.version")
+	if err != nil {
+		return nil, err
+	}
+
+	config.Get().Sarama.Version = *config.ParseVersion(version)
+
+	offsetInitial, err := cmd.Flags().GetString("kafka.consumer.offsets.initial")
+	if err != nil {
+		return nil, err
+	}
+
+	config.Get().Sarama.Consumer.Offsets.Initial = config.ParseOffsetsInitials(offsetInitial)
+
+	config.Get().Sarama.Version = *config.ParseVersion(version)
 
 	tlsConfig := config.CreateTlsConfiguration(conf)
 	if tlsConfig != nil {
@@ -43,6 +77,10 @@ func New(ctx context.Context, conf *config.Service, callback func(msg string) er
 		ctx:      ctx,
 		callback: callback,
 	}
+	// Initialize metrics counter
+	metrics.ConsumerEventCounter.Store(0)
+
+	config.Dump(cmd)
 
 	return &consumer, nil
 }
@@ -76,6 +114,8 @@ func (c *Gibson) Run() {
 	log.Println("terminating: context cancelled")
 
 	wg.Wait()
+	counter := metrics.ConsumerEventCounter.Load()
+	logger.Log.Infof("Messages received: %v", counter)
 	if err = c.client.Close(); err != nil {
 		logger.Log.Errorf("Error closing client: %v", err)
 	}
@@ -102,6 +142,7 @@ func (c *Gibson) ConsumeClaim(session sarama.ConsumerGroupSession, claim sarama.
 	for message := range claim.Messages() {
 		session.MarkMessage(message, "")
 		//log.Printf("Message claimed: value = %s, timestamp = %v, topic = %s", string(message.Value), message.Timestamp, message.Topic)
+		metrics.ConsumerEventCounter.Inc()
 		if err := c.callback(string(message.Value)); err != nil {
 			logger.Log.Info(err)
 		}
