@@ -5,64 +5,16 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/simplefxn/go-gibson/pkg/config"
-
-	"go.uber.org/atomic"
 )
 
 type Server struct {
 	srv *http.Server
 }
 
-var (
-	RisNotificationCounter = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "ris_producer_notification_events_total",
-		Help: "The total number of ris notification messages received",
-	})
-
-	RisOpenCounter = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "ris_producer_open_events_total",
-		Help: "The total number of ris events messages received",
-	})
-
-	RisPeerStateCounter = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "ris_producer_peer_state_events_total",
-		Help: "The total number of ris peer state messages received",
-	})
-
-	RisUnknownsCounter = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "ris_producer_unknown_events_total",
-		Help: "The total number of unknown messages received",
-	})
-
-	RisUpdateAnnouncementsCounter = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "ris_producer_update_announcements_events_total",
-		Help: "The total number of update-announcement messages received",
-	})
-
-	RisUpdateWithdrawalsCounter = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "ris_producer_update_withdrawal_events_total",
-		Help: "The total number of update-withdrawal messages received",
-	})
-
-	RisUpdateUnknownCounter = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "ris_producer_update_unknown_events_total",
-		Help: "The total number of unknown update messages received",
-	})
-
-	RisMessageCounter = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "ris_producer_events_total",
-		Help: "The total number of messages received",
-	})
-
-	SSEEventCounter atomic.Uint64
-)
-
 func init() {
-	SSEEventCounter.Store(0)
+
 }
 
 func New(conf config.Metrics) *Server {

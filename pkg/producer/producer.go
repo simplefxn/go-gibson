@@ -8,24 +8,24 @@ import (
 	"github.com/simplefxn/go-gibson/pkg/logger"
 )
 
-type RIS struct {
-	RisEventProducer sarama.AsyncProducer
+type Gibson struct {
+	producer sarama.AsyncProducer
 }
 
-func New(conf *config.Service) *RIS {
-	risProducer := RIS{
-		RisEventProducer: newProducer(conf),
+func New(conf *config.Service) *Gibson {
+	risProducer := Gibson{
+		producer: newProducer(conf),
 	}
 
 	return &risProducer
 }
 
-func (r RIS) Input() chan<- *sarama.ProducerMessage {
-	return r.RisEventProducer.Input()
+func (r Gibson) Input() chan<- *sarama.ProducerMessage {
+	return r.producer.Input()
 }
 
-func (r RIS) Close() error {
-	return r.RisEventProducer.Close()
+func (r Gibson) Close() error {
+	return r.producer.Close()
 }
 
 func newProducer(conf *config.Service) sarama.AsyncProducer {

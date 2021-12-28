@@ -12,7 +12,7 @@ import (
 )
 
 // Consumer represents a Sarama consumer group consumer
-type Consumer struct {
+type Gibson struct {
 	ready    chan bool
 	client   sarama.ConsumerGroup
 	topic    string
@@ -20,7 +20,7 @@ type Consumer struct {
 	callback func(msg string) error
 }
 
-func New(ctx context.Context, conf *config.Service, callback func(msg string) error) (*Consumer, error) {
+func New(ctx context.Context, conf *config.Service, callback func(msg string) error) (*Gibson, error) {
 
 	sarama.Logger = logger.NewSaramaLogger(logger.GetLogger())
 
@@ -36,7 +36,7 @@ func New(ctx context.Context, conf *config.Service, callback func(msg string) er
 		return nil, fmt.Errorf("error creating consumer group client: %v", err)
 	}
 
-	consumer := Consumer{
+	consumer := Gibson{
 		ready:    make(chan bool),
 		client:   client,
 		topic:    config.Get().Others.Consumer.Topic,
@@ -47,7 +47,7 @@ func New(ctx context.Context, conf *config.Service, callback func(msg string) er
 	return &consumer, nil
 }
 
-func (c *Consumer) Run() {
+func (c *Gibson) Run() {
 	var wg sync.WaitGroup
 	var err error
 
@@ -82,19 +82,19 @@ func (c *Consumer) Run() {
 }
 
 // Setup is run at the beginning of a new session, before ConsumeClaim
-func (c *Consumer) Setup(sarama.ConsumerGroupSession) error {
+func (c *Gibson) Setup(sarama.ConsumerGroupSession) error {
 	// Mark the consumer as ready
 	close(c.ready)
 	return nil
 }
 
 // Cleanup is run at the end of a session, once all ConsumeClaim goroutines have exited
-func (c *Consumer) Cleanup(sarama.ConsumerGroupSession) error {
+func (c *Gibson) Cleanup(sarama.ConsumerGroupSession) error {
 	return nil
 }
 
 // ConsumeClaim must start a consumer loop of ConsumerGroupClaim's Messages().
-func (c *Consumer) ConsumeClaim(session sarama.ConsumerGroupSession, claim sarama.ConsumerGroupClaim) error {
+func (c *Gibson) ConsumeClaim(session sarama.ConsumerGroupSession, claim sarama.ConsumerGroupClaim) error {
 	// NOTE:
 	// Do not move the code below to a goroutine.
 	// The `ConsumeClaim` itself is called within a goroutine, see:

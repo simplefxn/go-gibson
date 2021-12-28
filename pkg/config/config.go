@@ -41,7 +41,7 @@ func init() {
 	}
 }
 
-const EnvPrefix = "KAFKALOADER"
+const EnvPrefix = "GO_GIBSON"
 
 func ParseCompression(scheme string) sarama.CompressionCodec {
 	switch scheme {
