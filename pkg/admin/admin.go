@@ -48,13 +48,11 @@ func New(ctx context.Context, conf *config.Service) (*ClusterAdmin, error) {
 
 	yamlFile, err := ioutil.ReadFile(viper.GetViper().ConfigFileUsed())
 	if err != nil {
-		logger.Log.Info(err)
 		return nil, fmt.Errorf("yamlFile.Get err   #%v ", err)
 	}
 	d := &Data{}
 	err = yaml.Unmarshal(yamlFile, d)
 	if err != nil {
-		logger.Log.Info(err)
 		return nil, fmt.Errorf("unmarshal: %v", err)
 	}
 
@@ -74,7 +72,7 @@ func (c *ClusterAdmin) Process() error {
 	}
 	topic := c.data.Kafka.Topic
 
-	logger.Log.Infof("Creating topic %s", topic.Name)
+	logger.Log.Debugf("Creating topic %s", topic.Name)
 	err := c.admin.CreateTopic(topic.Name, &sarama.TopicDetail{
 		NumPartitions:     int32(topic.Partitions),
 		ReplicationFactor: int16(topic.ReplicationFactor),
@@ -83,7 +81,7 @@ func (c *ClusterAdmin) Process() error {
 		return err
 	}
 
-	logger.Log.Info("Letting topics settle in (10s)")
+	logger.Log.Debug("Letting topics settle in (10s)")
 	time.Sleep(10 * time.Second)
 	c.admin.Close()
 
