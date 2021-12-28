@@ -4,12 +4,12 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"strings"
 	"sync"
 
 	"github.com/Shopify/sarama"
 	"github.com/simplefxn/go-gibson/pkg/config"
 	"github.com/simplefxn/go-gibson/pkg/logger"
-	"github.com/simplefxn/go-gibson/pkg/metrics"
 	"github.com/spf13/cobra"
 )
 
@@ -20,6 +20,7 @@ type Gibson struct {
 	topic    string
 	ctx      context.Context
 	callback func(msg string) error
+	stats    *StatsInterceptor
 }
 
 func New(ctx context.Context, cmd *cobra.Command, conf *config.Service, callback func(msg string) error) (*Gibson, error) {
@@ -65,6 +66,18 @@ func New(ctx context.Context, cmd *cobra.Command, conf *config.Service, callback
 	}
 
 	brokers := []string{fmt.Sprintf("%s:%d", conf.Others.Net.Host, conf.Others.Net.Port)}
+
+	stats := newStats()
+
+	// Configure interceptors
+	interceptors := []sarama.ConsumerInterceptor{
+		stats,
+	}
+	if strings.ToLower(config.Get().Globals.LogLevel) == "debug" {
+		interceptors = append(interceptors, newLog())
+	}
+	config.Get().Sarama.Consumer.Interceptors = interceptors
+
 	client, err := sarama.NewConsumerGroup(brokers, config.Get().Others.Consumer.Group.Name, config.Get().Sarama)
 	if err != nil {
 		return nil, fmt.Errorf("error creating consumer group client: %v", err)
@@ -76,9 +89,8 @@ func New(ctx context.Context, cmd *cobra.Command, conf *config.Service, callback
 		topic:    config.Get().Others.Consumer.Topic,
 		ctx:      ctx,
 		callback: callback,
+		stats:    stats,
 	}
-	// Initialize metrics counter
-	metrics.ConsumerEventCounter.Store(0)
 
 	config.Dump(cmd)
 
@@ -114,8 +126,9 @@ func (c *Gibson) Run() {
 	log.Println("terminating: context cancelled")
 
 	wg.Wait()
-	counter := metrics.ConsumerEventCounter.Load()
-	logger.Log.Infof("Messages received: %v", counter)
+
+	logger.Log.Infof("Total messages: %v", c.stats.GetTotal())
+
 	if err = c.client.Close(); err != nil {
 		logger.Log.Errorf("Error closing client: %v", err)
 	}
@@ -140,13 +153,10 @@ func (c *Gibson) ConsumeClaim(session sarama.ConsumerGroupSession, claim sarama.
 	// The `ConsumeClaim` itself is called within a goroutine, see:
 	// https://github.com/Shopify/sarama/blob/main/consumer_group.go#L27-L29
 	for message := range claim.Messages() {
-		session.MarkMessage(message, "")
-		//log.Printf("Message claimed: value = %s, timestamp = %v, topic = %s", string(message.Value), message.Timestamp, message.Topic)
-		metrics.ConsumerEventCounter.Inc()
 		if err := c.callback(string(message.Value)); err != nil {
 			logger.Log.Info(err)
 		}
-
+		session.MarkMessage(message, "")
 	}
 
 	return nil
