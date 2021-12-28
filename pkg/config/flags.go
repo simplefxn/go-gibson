@@ -72,7 +72,6 @@ func GetProducerFlags() *pflag.FlagSet {
 	producerFlags.DurationVar(&globalConf.Others.Producer.Generator.Step, "kafka.producer.generator.step", 1*time.Second, "The time to take between sending messages in milliseconds (Default 1s)")
 	producerFlags.DurationVar(&globalConf.Others.Producer.Generator.Duration, "kafka.producer.generator.duration", 60*time.Second, "Overall duration of the test. (Default 60s)")
 	producerFlags.StringVar(&globalConf.Others.Producer.Generator.Topic, "kafka.producer.generator.topic", "topic1", "Topic to publish to kafka")
-	producerFlags.BoolVar(&globalConf.Others.Producer.Generator.Verbose, "kafka.producer.generator.verbose", false, "Output messages to the log")
 
 	return producerFlags
 }

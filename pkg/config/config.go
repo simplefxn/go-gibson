@@ -66,7 +66,6 @@ type SaramaComplex struct {
 			Step     time.Duration
 			Duration time.Duration
 			Topic    string
-			Verbose  bool
 		}
 	}
 
