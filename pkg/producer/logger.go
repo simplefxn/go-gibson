@@ -16,5 +16,5 @@ func newLog() *LogInterceptor {
 }
 
 func (s *LogInterceptor) OnSend(msg *sarama.ProducerMessage) {
-	logger.Log.Infof("%v", msg)
+	logger.Log.Infof("%s: %v", msg.Topic, msg.Value)
 }
