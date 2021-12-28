@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/Shopify/sarama"
-	"github.com/simplefxn/kafkaLoad/pkg/logger"
+	"github.com/simplefxn/go-gibson/pkg/logger"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"

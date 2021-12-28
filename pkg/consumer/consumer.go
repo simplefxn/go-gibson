@@ -7,8 +7,8 @@ import (
 	"sync"
 
 	"github.com/Shopify/sarama"
-	"github.com/simplefxn/kafkaLoad/pkg/config"
-	"github.com/simplefxn/kafkaLoad/pkg/logger"
+	"github.com/simplefxn/go-gibson/pkg/config"
+	"github.com/simplefxn/go-gibson/pkg/logger"
 )
 
 // Consumer represents a Sarama consumer group consumer

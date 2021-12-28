@@ -8,7 +8,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"github.com/simplefxn/kafkaLoad/pkg/config"
+	"github.com/simplefxn/go-gibson/pkg/config"
 
 	"go.uber.org/atomic"
 )
