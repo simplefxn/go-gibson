@@ -1,4 +1,4 @@
-module github.com/simplefxn/kafkaLoad
+module github.com/simplefxn/go-gibson
 
 go 1.17
 
