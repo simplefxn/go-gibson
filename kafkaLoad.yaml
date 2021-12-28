@@ -1,0 +1,77 @@
+kafka:
+  Topic:
+    Name: load-test-1
+    Partitions: 3
+    Replication_factor: 3
+  Broker: cluster-kafka.kafka.svc.cluster.local
+  Port: 9092
+  Admin:
+    Retry:
+      Max: 5
+      Backoff: 100ms
+    Timeout: 3s
+  Net:
+    MaxOpenRequests: 5
+    DialTimeout: 30s
+    ReadTimeout: 30s
+    WriteTimeout: 30s
+
+  Metadata:
+    Retry.Max: 3
+    Retry.Backoff: 250ms
+    RefreshFrequency: 10m
+    Full: true
+    AllowAutoTopicCreation: true
+
+  Producer:
+    Generator:
+      Step: 10ms
+      Duration: 60s
+      Topic: load-test-1
+      Verbose: true
+    MaxMessageBytes: 1000000
+    RequiredAcks: waitforlocal
+    Timeout: 10s
+    Partitioner: roundrobin
+    Retry:
+      Max: 6
+      Backoff: 100ms
+    Return.Errors: false
+    CompressionLevel: none
+    Flush:
+      Bytes: 0
+      Messages: 10
+      Frequency: 10ms
+      MaxMessages: 10
+
+  Consumer:
+    Topic: load-test-1
+    Verbose: true
+    Fetch:
+      Min: 1
+      Default: 1048576
+    Retry.Backoff: 2s
+    MaxWaitTime: 250ms
+    MaxProcessingTime: 100ms
+    Return.Errors: false
+    Offsets:
+      AutoCommit:
+        Enable: true
+        Interval: 1s
+      Initial: OffsetNewest
+      Retry:
+        Max: 3
+    Group:
+      Session.Timeout: 10s
+      Heartbeat.Interval: 3s
+      Rebalance:
+        Strategy: range
+        Timeout: 60s
+        Retry:
+          Max: 4
+          Backoff: 2s
+
+  ClientID: "kafkaLoad"
+  ChannelBufferSize: 1024
+  ApiVersionsRequest: true
+  Version: "2.8.1"
