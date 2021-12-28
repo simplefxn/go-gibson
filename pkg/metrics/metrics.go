@@ -7,6 +7,11 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/simplefxn/go-gibson/pkg/config"
+	"go.uber.org/atomic"
+)
+
+var (
+	SSEEventCounter atomic.Uint64
 )
 
 type Server struct {

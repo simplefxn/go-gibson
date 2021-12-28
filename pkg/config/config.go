@@ -15,11 +15,12 @@ import (
 	"github.com/spf13/viper"
 )
 
-type Metrics struct {
-	Enable bool
-	Port   int
-	Path   string
-}
+const EnvPrefix = "GO_GIBSON"
+
+var (
+	cfgFile    string
+	globalConf Service
+)
 
 type Service struct {
 	Metrics        Metrics
@@ -28,10 +29,73 @@ type Service struct {
 	Others         *SaramaComplex
 }
 
-var globalConf Service
+type Metrics struct {
+	Enable bool
+	Port   int
+	Path   string
+}
+
+type SaramaComplex struct {
+	Net struct {
+		Host      string
+		Port      int
+		Cert      string
+		Key       string
+		CA        string
+		VerifySSL bool
+	}
+	Producer struct {
+		// The type of compression to use on messages (defaults to no compression).
+		// Values  CompressionNone CompressionCodec CompressionGZIP CompressionSnappy CompressionLZ4 CompressionZSTD
+		Compression string
+		// Generates partitioners for choosing the partition to send messages to
+		// (defaults to hashing the message key). Similar to the `partitioner.class`
+		// setting for the JVM producer.
+		// Values RandomPartitioner HashPartitioner RoundRobinPartitioner
+		Partitioner string
+		// RequiredAcks
+		RequiredAcks string
+		Generator    struct {
+			Step     time.Duration
+			Duration time.Duration
+			Topic    string
+			Verbose  bool
+		}
+	}
+
+	// Consumer is the namespace for configuration related to consuming messages,
+	// used by the Consumer.
+	Consumer struct {
+		Topic   string
+		Verbose bool
+		// Group is the namespace for configuring consumer group.
+		Group struct {
+			Name      string
+			Rebalance struct {
+				// Strategy for allocating topic partitions to members (default BalanceStrategyRange)
+				// Values BalanceStrategySticky BalanceStrategyRoundRobin BalanceStrategyRange
+				Strategy string
+			}
+		}
+		Offsets struct {
+			Initial string
+		}
+		// IsolationLevel support 2 mode:
+		// 	- use `ReadUncommitted` (default) to consume and return all messages in message channel
+		//	- use `ReadCommitted` to hide messages that are part of an aborted transaction
+		// values ReadUncommitted ReadCommitted
+		IsolationLevel string
+	}
+
+	Version string
+}
 
 func Get() *Service {
 	return &globalConf
+}
+
+func GetConfigFileName() string {
+	return cfgFile
 }
 
 func init() {
@@ -40,8 +104,6 @@ func init() {
 		Others: &SaramaComplex{},
 	}
 }
-
-const EnvPrefix = "GO_GIBSON"
 
 func ParseCompression(scheme string) sarama.CompressionCodec {
 	switch scheme {
@@ -164,66 +226,6 @@ func CreateTlsConfiguration(conf *Service) (t *tls.Config) {
 	}
 	// will be nil by default if nothing is provided
 	return t
-}
-
-type FakeData struct {
-	UUID string `fake:"{uuid}" json:"uuid"`
-	Ipv4 string `fake:"{ipv4address}" json:"ipv4"`
-}
-
-type SaramaComplex struct {
-	Net struct {
-		Host      string
-		Port      int
-		Cert      string
-		Key       string
-		CA        string
-		VerifySSL bool
-	}
-	Producer struct {
-		// The type of compression to use on messages (defaults to no compression).
-		// Values  CompressionNone CompressionCodec CompressionGZIP CompressionSnappy CompressionLZ4 CompressionZSTD
-		Compression string
-		// Generates partitioners for choosing the partition to send messages to
-		// (defaults to hashing the message key). Similar to the `partitioner.class`
-		// setting for the JVM producer.
-		// Values RandomPartitioner HashPartitioner RoundRobinPartitioner
-		Partitioner string
-		// RequiredAcks
-		RequiredAcks string
-		Generator    struct {
-			Step     time.Duration
-			Duration time.Duration
-			Topic    string
-			Verbose  bool
-		}
-	}
-
-	// Consumer is the namespace for configuration related to consuming messages,
-	// used by the Consumer.
-	Consumer struct {
-		Topic   string
-		Verbose bool
-		// Group is the namespace for configuring consumer group.
-		Group struct {
-			Name      string
-			Rebalance struct {
-				// Strategy for allocating topic partitions to members (default BalanceStrategyRange)
-				// Values BalanceStrategySticky BalanceStrategyRoundRobin BalanceStrategyRange
-				Strategy string
-			}
-		}
-		Offsets struct {
-			Initial string
-		}
-		// IsolationLevel support 2 mode:
-		// 	- use `ReadUncommitted` (default) to consume and return all messages in message channel
-		//	- use `ReadCommitted` to hide messages that are part of an aborted transaction
-		// values ReadUncommitted ReadCommitted
-		IsolationLevel string
-	}
-
-	Version string
 }
 
 // Bind each cobra flag to its associated viper configuration (config file and environment variable)
