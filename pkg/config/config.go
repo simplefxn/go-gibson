@@ -116,7 +116,7 @@ func ParseCompression(scheme string) sarama.CompressionCodec {
 	case "lz4":
 		return sarama.CompressionLZ4
 	default:
-		fmt.Fprintf(os.Stderr, "Unknown -compression: %s\n", scheme)
+		logger.Log.Errorf("unknown -compression: %s\n", scheme)
 		os.Exit(1)
 	}
 	return sarama.CompressionNone
@@ -134,7 +134,7 @@ func ParsePartitioner(scheme string) sarama.PartitionerConstructor {
 	case "roundrobin":
 		return sarama.NewRoundRobinPartitioner
 	default:
-		fmt.Fprintf(os.Stderr, "Unknown -partitioning: %s\n", scheme)
+		logger.Log.Errorf("unknown -partitioning: %s\n", scheme)
 		os.Exit(1)
 	}
 	return sarama.NewHashPartitioner
@@ -148,7 +148,7 @@ func ParseIsolation(scheme string) sarama.IsolationLevel {
 	case "readcommitted":
 		return sarama.ReadCommitted
 	default:
-		fmt.Fprintf(os.Stderr, "Unknown -isolation: %s\n", scheme)
+		logger.Log.Errorf("unknown -isolation: %s\n", scheme)
 		os.Exit(1)
 	}
 	return sarama.ReadUncommitted
@@ -164,7 +164,7 @@ func ParseBalanceStrategy(scheme string) sarama.BalanceStrategy {
 	case "roundrobin":
 		return sarama.BalanceStrategyRoundRobin
 	default:
-		fmt.Fprintf(os.Stderr, "Unknown -rebalancestrategy: %s\n", scheme)
+		logger.Log.Errorf("unknown -rebalancestrategy: %s\n", scheme)
 		os.Exit(1)
 	}
 	return sarama.BalanceStrategyRange
@@ -173,7 +173,7 @@ func ParseBalanceStrategy(scheme string) sarama.BalanceStrategy {
 func ParseVersion(version string) *sarama.KafkaVersion {
 	result, err := sarama.ParseKafkaVersion(version)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "unknown -version: %s\n", version)
+		logger.Log.Errorf("unknown -version: %s\n", version)
 		os.Exit(1)
 	}
 	return &result
@@ -241,8 +241,8 @@ func BindFlags(cmd *cobra.Command, v *viper.Viper) {
 		// Apply the viper config value to the flag when the flag is not set and viper has a value
 		if !f.Changed && v.IsSet(f.Name) {
 			val := v.Get(f.Name)
-			fmt.Printf("%v:", f.Name)
-			fmt.Printf("%v\n", val)
+			logger.Log.Debugf("%v:", f.Name)
+			logger.Log.Debugf("%v\n", val)
 			cmd.Flags().Set(f.Name, fmt.Sprintf("%v", val))
 		}
 	})
