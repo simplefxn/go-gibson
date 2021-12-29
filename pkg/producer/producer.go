@@ -20,30 +20,20 @@ func New(cmd *cobra.Command, conf *config.Service) (*Gibson, error) {
 
 	stats := newStats()
 
+	saramaProd, err := newProducer(conf, stats)
+	if err != nil {
+		return nil, err
+	}
+
 	producer := Gibson{
-		producer: newProducer(conf, stats),
+		producer: saramaProd,
 		stats:    stats,
 	}
 
-	compression, err := cmd.Flags().GetString("kafka.producer.compression")
+	err = config.SetProducerFlags(cmd.Flags())
 	if err != nil {
 		return nil, err
 	}
-	config.Get().Sarama.Producer.Compression = config.ParseCompression(compression)
-
-	partitioner, err := cmd.Flags().GetString("kafka.producer.partitioner")
-	if err != nil {
-		return nil, err
-	}
-
-	config.Get().Sarama.Producer.Partitioner = config.ParsePartitioner(partitioner)
-
-	version, err := cmd.Flags().GetString("kafka.version")
-	if err != nil {
-		return nil, err
-	}
-
-	config.Get().Sarama.Version = *config.ParseVersion(version)
 
 	config.Dump(cmd)
 
@@ -59,7 +49,7 @@ func (r Gibson) Close() error {
 	return r.producer.Close()
 }
 
-func newProducer(conf *config.Service, stats *StatsInterceptor) sarama.AsyncProducer {
+func newProducer(conf *config.Service, stats *StatsInterceptor) (sarama.AsyncProducer, error) {
 	sarama.Logger = logger.NewSaramaLogger(logger.GetLogger())
 
 	tlsConfig := config.CreateTlsConfiguration(conf)
@@ -79,8 +69,7 @@ func newProducer(conf *config.Service, stats *StatsInterceptor) sarama.AsyncProd
 	producer, err := sarama.NewAsyncProducer(brokers, config.Get().Sarama)
 
 	if err != nil {
-		logger.Log.Fatalf("Failed to start Sarama producer: %v", err)
+		return nil, err
 	}
-	logger.Log.Infof("Created async producer")
-	return producer
+	return producer, nil
 }
