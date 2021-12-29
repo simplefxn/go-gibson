@@ -101,7 +101,7 @@ func (c *Gibson) Run() {
 
 	wg.Wait()
 
-	logger.Log.Info("Total messages: %v", c.stats.GetTotal())
+	logger.Log.Infof("Total messages: %v", c.stats.GetTotal())
 
 	if err = c.client.Close(); err != nil {
 		logger.Log.Errorf("Error closing client: %v", err)
