@@ -3,7 +3,6 @@ package consumer
 import (
 	"context"
 	"fmt"
-	"log"
 	"strings"
 	"sync"
 
@@ -25,39 +24,14 @@ type Gibson struct {
 
 func New(ctx context.Context, cmd *cobra.Command, conf *config.Service, callback func(msg string) error) (*Gibson, error) {
 
-	config.SetLogLevel(cmd)
-
 	sarama.Logger = logger.NewSaramaLogger(logger.GetLogger())
 
-	rebalance, err := cmd.Flags().GetString("kafka.consumer.group.rebalance.strategy")
+	config.SetLogLevel(cmd)
+
+	err := config.SetConsumerFlags(cmd.Flags())
 	if err != nil {
 		return nil, err
 	}
-
-	config.Get().Sarama.Consumer.Group.Rebalance.Strategy = config.ParseBalanceStrategy(rebalance)
-
-	isolation, err := cmd.Flags().GetString("kafka.consumer.isolationlevel")
-	if err != nil {
-		return nil, err
-	}
-
-	config.Get().Sarama.Consumer.IsolationLevel = config.ParseIsolation(isolation)
-
-	version, err := cmd.Flags().GetString("kafka.version")
-	if err != nil {
-		return nil, err
-	}
-
-	config.Get().Sarama.Version = *config.ParseVersion(version)
-
-	offsetInitial, err := cmd.Flags().GetString("kafka.consumer.offsets.initial")
-	if err != nil {
-		return nil, err
-	}
-
-	config.Get().Sarama.Consumer.Offsets.Initial = config.ParseOffsetsInitials(offsetInitial)
-
-	config.Get().Sarama.Version = *config.ParseVersion(version)
 
 	tlsConfig := config.CreateTlsConfiguration(conf)
 	if tlsConfig != nil {
@@ -67,9 +41,9 @@ func New(ctx context.Context, cmd *cobra.Command, conf *config.Service, callback
 
 	brokers := []string{fmt.Sprintf("%s:%d", conf.Others.Net.Host, conf.Others.Net.Port)}
 
+	// Configure interceptors
 	stats := newStats()
 
-	// Configure interceptors
 	interceptors := []sarama.ConsumerInterceptor{
 		stats,
 	}
@@ -86,7 +60,7 @@ func New(ctx context.Context, cmd *cobra.Command, conf *config.Service, callback
 	consumer := Gibson{
 		ready:    make(chan bool),
 		client:   client,
-		topic:    config.Get().Others.Consumer.Topic,
+		topic:    config.GetConsumerTopic(),
 		ctx:      ctx,
 		callback: callback,
 		stats:    stats,
@@ -109,7 +83,7 @@ func (c *Gibson) Run() {
 			// server-side rebalance happens, the consumer session will need to be
 			// recreated to get the new claims
 			if err := c.client.Consume(c.ctx, []string{c.topic}, c); err != nil {
-				log.Panicf("Error from consumer: %v", err)
+				logger.Log.Fatalf("Error from consumer: %v", err)
 			}
 			// check if context was cancelled, signaling that the consumer should stop
 			if c.ctx.Err() != nil {
@@ -120,14 +94,14 @@ func (c *Gibson) Run() {
 	}()
 
 	<-c.ready // Await till the consumer has been set up
-	log.Println("Sarama consumer up and running!...")
+	logger.Log.Info("Sarama consumer up and running!...")
 
 	<-c.ctx.Done()
-	log.Println("terminating: context cancelled")
+	logger.Log.Info("terminating: context cancelled")
 
 	wg.Wait()
 
-	logger.Log.Infof("Total messages: %v", c.stats.GetTotal())
+	logger.Log.Info("Total messages: %v", c.stats.GetTotal())
 
 	if err = c.client.Close(); err != nil {
 		logger.Log.Errorf("Error closing client: %v", err)
@@ -154,7 +128,7 @@ func (c *Gibson) ConsumeClaim(session sarama.ConsumerGroupSession, claim sarama.
 	// https://github.com/Shopify/sarama/blob/main/consumer_group.go#L27-L29
 	for message := range claim.Messages() {
 		if err := c.callback(string(message.Value)); err != nil {
-			logger.Log.Info(err)
+			return err
 		}
 		session.MarkMessage(message, "")
 	}
