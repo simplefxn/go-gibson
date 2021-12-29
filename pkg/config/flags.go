@@ -148,3 +148,27 @@ func SetConsumerFlags(flags *pflag.FlagSet) error {
 
 	return nil
 }
+
+func SetProducerFlags(flags *pflag.FlagSet) error {
+	compression, err := flags.GetString("kafka.producer.compression")
+	if err != nil {
+		return err
+	}
+	globalConf.Sarama.Producer.Compression = ParseCompression(compression)
+
+	partitioner, err := flags.GetString("kafka.producer.partitioner")
+	if err != nil {
+		return err
+	}
+
+	globalConf.Sarama.Producer.Partitioner = ParsePartitioner(partitioner)
+
+	version, err := flags.GetString("kafka.version")
+	if err != nil {
+		return err
+	}
+
+	globalConf.Sarama.Version = *parseVersion(version)
+
+	return nil
+}
