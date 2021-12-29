@@ -29,6 +29,7 @@ type Service struct {
 	Sarama  *sarama.Config
 	Others  *SaramaComplex
 	Globals Globals
+	SSE     SSE
 }
 
 type Metrics struct {
@@ -40,6 +41,13 @@ type Metrics struct {
 type Globals struct {
 	ReportInterval time.Duration
 	LogLevel       string
+}
+
+type SSE struct {
+	Section struct {
+		URL      string `yaml:"url"`
+		ClientId string `yaml:"clientid"`
+	} `yaml:"ServerSideEvent"`
 }
 
 type SaramaComplex struct {

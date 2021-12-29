@@ -13,8 +13,14 @@ func GetGenericFlags() *pflag.FlagSet {
 
 	defaults.StringVar(&globalConf.Globals.LogLevel, "log.level", "info", "verbosity of logs, known levels are: debug, info, warn, error, fatal, panic")
 
-	defaults.DurationVar(&globalConf.Globals.ReportInterval, "interval", 60*time.Second, "report to console interval(60 seconds)")
+	defaults.DurationVar(&globalConf.Globals.ReportInterval, "report.interval", 60*time.Second, "report to console interval(60 seconds)")
 
+	return defaults
+}
+
+func GetKafkaGenericFlags() *pflag.FlagSet {
+
+	defaults := pflag.NewFlagSet("defaults for all commands", pflag.ExitOnError)
 	defaults.StringVar(&globalConf.Others.Net.Host, "kafka.broker", "cluster-kafka.kafka.svc", "host to connect or bind the socket")
 
 	// Kafka.port Port use to connect to the kafka broker
@@ -32,6 +38,8 @@ func GetGenericFlags() *pflag.FlagSet {
 	// Kafka.verifyssl Optional verify ssl certificates chain
 	defaults.BoolVar(&globalConf.Others.Net.VerifySSL, "kafka.verifyssl", true, "Optional verify ssl certificates chain")
 
+	defaults.StringVar(&globalConf.Others.Version, "kafka.version", "3.0.0", "The version of Kafka that Sarama will assume it is running against. Defaults to the oldest supported stable version")
+
 	return defaults
 }
 
@@ -44,6 +52,15 @@ func GetMetricsFlags() *pflag.FlagSet {
 	flags.IntVar(&globalConf.Metrics.Port, "metrics.port", 8080, "Port to liste for prometheus metrics scraping")
 	flags.StringVar(&globalConf.Metrics.Path, "metrics.path", "/metrics", "Path for prometheus metrics scraping ")
 
+	return flags
+}
+
+func GetSSEFlags() *pflag.FlagSet {
+	flags := pflag.NewFlagSet("SSE parameters", pflag.ExitOnError)
+
+	flags.StringVar(&globalConf.SSE.Section.URL, "ris.url", "https://ris-live.ripe.net/v1/stream", "ris url to connect for sse")
+
+	flags.StringVar(&globalConf.SSE.Section.ClientId, "ris.clientstring", "ris-client", "ris url to connect for sse")
 	return flags
 }
 

@@ -33,19 +33,15 @@ var (
 
 type Client struct {
 	client *http.Client
-	uri    string
-	conf   config.Service
 	ctx    context.Context
 }
 
-func New(ctx context.Context, conf config.Service, uri string) *Client {
+func New(ctx context.Context) *Client {
 	c := &Client{
 		client: &http.Client{
 			Timeout: 5 * time.Minute,
 		},
-		conf: conf,
-		uri:  uri,
-		ctx:  ctx,
+		ctx: ctx,
 	}
 
 	return c
@@ -135,7 +131,7 @@ func getEvents(br *bufio.Reader, evCh chan<- *Event) error {
 	}
 }
 
-func (c *Client) Start(callback func(*Event)) {
+func (c *Client) Start(url string, callback func(*Event)) {
 	var wg sync.WaitGroup
 	// Make a receive channel for getting messages from the http response
 	recvChan := make(chan *Event)
@@ -149,7 +145,7 @@ func (c *Client) Start(callback func(*Event)) {
 			if ctxDone {
 				return
 			}
-			res, err := c.clientConnect(c.uri)
+			res, err := c.clientConnect(url)
 			if err != nil {
 				logger.Log.Info("Client connect skip until next cycle.")
 				continue
@@ -181,7 +177,7 @@ func (c *Client) Start(callback func(*Event)) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		ticker := time.NewTicker(c.conf.Globals.ReportInterval)
+		ticker := time.NewTicker(config.Get().Globals.ReportInterval)
 	outside_cb:
 		for {
 			select {

@@ -1,3 +1,6 @@
+ServerSideEvent:
+  URL: https://ris-live.ripe.net/v1/stream
+  ClientID: ris-client
 kafka:
   Topic:
     Name: load-test-1
