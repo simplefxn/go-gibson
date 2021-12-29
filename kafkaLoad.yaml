@@ -28,7 +28,6 @@ kafka:
       Step: 10ms
       Duration: 60s
       Topic: load-test-1
-      Verbose: true
     MaxMessageBytes: 1000000
     RequiredAcks: waitforlocal
     Timeout: 10s
