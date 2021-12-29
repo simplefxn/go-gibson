@@ -15,12 +15,12 @@ type Gibson struct {
 	stats    *StatsInterceptor
 }
 
-func New(cmd *cobra.Command, conf *config.Service) (*Gibson, error) {
+func New(cmd *cobra.Command) (*Gibson, error) {
 	config.SetLogLevel(cmd)
 
 	stats := newStats()
 
-	saramaProd, err := newProducer(conf, stats)
+	saramaProd, err := newProducer(config.Get(), stats)
 	if err != nil {
 		return nil, err
 	}

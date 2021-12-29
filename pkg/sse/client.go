@@ -13,7 +13,6 @@ import (
 
 	"github.com/simplefxn/go-gibson/pkg/config"
 	"github.com/simplefxn/go-gibson/pkg/logger"
-	"github.com/simplefxn/go-gibson/pkg/metrics"
 )
 
 //SSE name constants
@@ -22,7 +21,7 @@ const (
 	dName = "data"
 )
 
-type SSE_RIS struct {
+type Event struct {
 	Type string `json:"type"`
 	Data string `json:"data"`
 }
@@ -63,8 +62,8 @@ func liveReq(verb, uri string, body io.Reader) (*http.Request, error) {
 	return req, nil
 }
 
-//Event is a go representation of an http server-sent event
-type Event struct {
+//SSEvent is a go representation of an http server-sent event
+type SSEvent struct {
 	Type string
 	Data io.Reader
 }
@@ -90,9 +89,9 @@ func (c *Client) clientConnect(uri string) (*http.Response, error) {
 	return res, nil
 }
 
-func getEvent(br *bufio.Reader) (*SSE_RIS, error) {
+func getEvent(br *bufio.Reader) (*Event, error) {
 	delim := []byte{':', ' '}
-	currEvent := &SSE_RIS{}
+	currEvent := &Event{}
 
 	for {
 		bs, err := br.ReadBytes('\n')
@@ -122,7 +121,7 @@ func getEvent(br *bufio.Reader) (*SSE_RIS, error) {
 	}
 }
 
-func getEvents(br *bufio.Reader, evCh chan<- *SSE_RIS) error {
+func getEvents(br *bufio.Reader, evCh chan<- *Event) error {
 
 	for {
 		currEvent, err := getEvent(br)
@@ -131,15 +130,15 @@ func getEvents(br *bufio.Reader, evCh chan<- *SSE_RIS) error {
 			return err
 		}
 		// Increment internal metrics counter
-		metrics.SSEEventCounter.Inc()
+		eventCounter.Inc()
 		evCh <- currEvent
 	}
 }
 
-func (c *Client) Start(cb func(*SSE_RIS)) {
+func (c *Client) Start(callback func(*Event)) {
 	var wg sync.WaitGroup
 	// Make a receive channel for getting messages from the http response
-	recvChan := make(chan *SSE_RIS)
+	recvChan := make(chan *Event)
 	ctxDone := false
 
 	// Main goroutine, connect, fecth event , repeat
@@ -179,30 +178,10 @@ func (c *Client) Start(cb func(*SSE_RIS)) {
 		}
 	}()
 
-	// Goroutine to display in log the rate
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		logger.Log.Infof("Starting producer monitoring every %f", c.conf.MonInverval.Seconds())
-
-	ticker_outside:
-		for {
-			select {
-
-			case <-c.ctx.Done():
-				logger.Log.Info("SSE client receive signal to stop, closing receive channel")
-				close(recvChan)
-
-				break ticker_outside
-			}
-		}
-		logger.Log.Info("Exit producer monitiring goroutine")
-	}()
-
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		ticker := time.NewTicker(c.conf.MonInverval)
+		ticker := time.NewTicker(c.conf.Globals.ReportInterval)
 	outside_cb:
 		for {
 			select {
@@ -213,11 +192,11 @@ func (c *Client) Start(cb func(*SSE_RIS)) {
 				break outside_cb
 			// If we receive a message, call back to user function
 			case msg := <-recvChan:
-				cb(msg)
+				callback(msg)
 			case <-ticker.C:
-				x := metrics.SSEEventCounter.Load()
+				x := eventCounter.Load()
 				logger.Log.Infof("Rate %s msg/int", strconv.FormatUint(x, 10))
-				metrics.SSEEventCounter.Store(0)
+				eventCounter.Store(0)
 			}
 
 		}

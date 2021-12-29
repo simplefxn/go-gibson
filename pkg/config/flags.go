@@ -13,7 +13,7 @@ func GetGenericFlags() *pflag.FlagSet {
 
 	defaults.StringVar(&globalConf.Globals.LogLevel, "log.level", "info", "verbosity of logs, known levels are: debug, info, warn, error, fatal, panic")
 
-	defaults.DurationVar(&globalConf.Globals.ReportInterval, "interval", 60*time.Second, "monitoring interval(60 seconds)")
+	defaults.DurationVar(&globalConf.Globals.ReportInterval, "interval", 60*time.Second, "report to console interval(60 seconds)")
 
 	defaults.StringVar(&globalConf.Others.Net.Host, "kafka.broker", "cluster-kafka.kafka.svc", "host to connect or bind the socket")
 
