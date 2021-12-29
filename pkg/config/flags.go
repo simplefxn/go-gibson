@@ -116,3 +116,35 @@ func GetConsumerFlags() *pflag.FlagSet {
 
 	return consumerFlags
 }
+
+func SetConsumerFlags(flags *pflag.FlagSet) error {
+	rebalance, err := flags.GetString("kafka.consumer.group.rebalance.strategy")
+	if err != nil {
+		return err
+	}
+
+	globalConf.Sarama.Consumer.Group.Rebalance.Strategy = parseBalanceStrategy(rebalance)
+
+	isolation, err := flags.GetString("kafka.consumer.isolationlevel")
+	if err != nil {
+		return err
+	}
+
+	globalConf.Sarama.Consumer.IsolationLevel = parseIsolation(isolation)
+
+	version, err := flags.GetString("kafka.version")
+	if err != nil {
+		return err
+	}
+
+	globalConf.Sarama.Version = *parseVersion(version)
+
+	offsetInitial, err := flags.GetString("kafka.consumer.offsets.initial")
+	if err != nil {
+		return err
+	}
+
+	globalConf.Sarama.Consumer.Offsets.Initial = parseOffsetsInitials(offsetInitial)
+
+	return nil
+}

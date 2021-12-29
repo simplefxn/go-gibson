@@ -146,7 +146,7 @@ func ParsePartitioner(scheme string) sarama.PartitionerConstructor {
 	return sarama.NewHashPartitioner
 }
 
-func ParseIsolation(scheme string) sarama.IsolationLevel {
+func parseIsolation(scheme string) sarama.IsolationLevel {
 	scheme = strings.ToLower(scheme)
 	switch scheme {
 	case "readuncommitted":
@@ -160,7 +160,7 @@ func ParseIsolation(scheme string) sarama.IsolationLevel {
 	return sarama.ReadUncommitted
 }
 
-func ParseBalanceStrategy(scheme string) sarama.BalanceStrategy {
+func parseBalanceStrategy(scheme string) sarama.BalanceStrategy {
 	scheme = strings.ToLower(scheme)
 	switch scheme {
 	case "range":
@@ -176,7 +176,7 @@ func ParseBalanceStrategy(scheme string) sarama.BalanceStrategy {
 	return sarama.BalanceStrategyRange
 }
 
-func ParseVersion(version string) *sarama.KafkaVersion {
+func parseVersion(version string) *sarama.KafkaVersion {
 	result, err := sarama.ParseKafkaVersion(version)
 	if err != nil {
 		logger.Log.Errorf("unknown -version: %s\n", version)
@@ -198,7 +198,7 @@ func ParseRequiredAcks(acks string) sarama.RequiredAcks {
 	return sarama.NoResponse
 }
 
-func ParseOffsetsInitials(acks string) int64 {
+func parseOffsetsInitials(acks string) int64 {
 	scheme := strings.ToLower(acks)
 	switch scheme {
 	case "offsetoldest":
@@ -207,6 +207,10 @@ func ParseOffsetsInitials(acks string) int64 {
 		return sarama.OffsetNewest
 	}
 	return sarama.OffsetNewest
+}
+
+func GetConsumerTopic() string {
+	return globalConf.Others.Consumer.Topic
 }
 
 func CreateTlsConfiguration(conf *Service) (t *tls.Config) {
