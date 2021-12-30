@@ -117,7 +117,7 @@ func getEvent(br *bufio.Reader) (*Event, error) {
 	}
 }
 
-func getEvents(br *bufio.Reader, evCh chan<- *Event) error {
+func getEvents(ctx context.Context, br *bufio.Reader, evCh chan<- *Event) error {
 
 	for {
 		currEvent, err := getEvent(br)
@@ -125,9 +125,14 @@ func getEvents(br *bufio.Reader, evCh chan<- *Event) error {
 			logger.Log.Errorf("Error getting event: %s", err.Error())
 			return err
 		}
+		if ctx.Err() != nil {
+			return nil
+		}
+
 		// Increment internal metrics counter
 		eventCounter.Inc()
 		evCh <- currEvent
+
 	}
 }
 
@@ -137,12 +142,13 @@ func (c *Client) Start(url string, callback func(*Event)) {
 	recvChan := make(chan *Event)
 	ctxDone := false
 
-	// Main goroutine, connect, fecth event , repeat
+	// Connection goroutine, connect, fecth events , repeat
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
 		for {
 			if ctxDone {
+				logger.Log.Info("Context close, exiting sse")
 				return
 			}
 			res, err := c.clientConnect(url)
@@ -156,7 +162,7 @@ func (c *Client) Start(url string, callback func(*Event)) {
 			go func(ctx context.Context, res *http.Response) {
 				<-ctx.Done()
 				ctxDone = true
-				logger.Log.Info("Received context close, closing service side response")
+				logger.Log.Info("Closing service side response")
 				res.Body.Close()
 			}(c.ctx, res)
 
@@ -164,35 +170,51 @@ func (c *Client) Start(url string, callback func(*Event)) {
 			br := bufio.NewReader(res.Body)
 			// Loop for all events and send them to the recv Channel
 			// this blocks until the response is close
-			err = getEvents(br, recvChan)
+			err = getEvents(c.ctx, br, recvChan)
 			// If the goRoutine context is dome
 			if err != nil {
 				logger.Log.Info("Error from getting events from connection, skip until next cycle")
-				res.Body.Close()
+				//res.Body.Close()
 				continue
 			}
 		}
 	}()
 
+	// Report goroutine
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
 		ticker := time.NewTicker(config.Get().Globals.ReportInterval)
-	outside_cb:
+	report:
 		for {
 			select {
 			case <-c.ctx.Done():
-				logger.Log.Info("SSE client receive signal to stop, closing receive channel")
-				close(recvChan)
+				logger.Log.Info("Reporting received context closing, stoping now")
+				//close(recvChan) TODO: This channel is leaking
 				ticker.Stop()
-				break outside_cb
-			// If we receive a message, call back to user function
-			case msg := <-recvChan:
-				callback(msg)
+				break report
 			case <-ticker.C:
 				x := eventCounter.Load()
 				logger.Log.Infof("Rate %s msg/int", strconv.FormatUint(x, 10))
 				eventCounter.Store(0)
+			}
+		}
+	}()
+
+	// SSE reader goroutine
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+	reader:
+		for {
+			select {
+			case <-c.ctx.Done():
+				logger.Log.Info("SSE reader received context closing, stoping now")
+				//close(recvChan) TODO: This channel is leaking
+				break reader
+			// If we receive a message, call back to user function
+			case msg := <-recvChan:
+				callback(msg)
 			}
 
 		}

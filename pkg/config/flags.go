@@ -40,6 +40,12 @@ func GetKafkaGenericFlags() *pflag.FlagSet {
 
 	defaults.StringVar(&globalConf.Others.Version, "kafka.version", "3.0.0", "The version of Kafka that Sarama will assume it is running against. Defaults to the oldest supported stable version")
 
+	defaults.StringVar(&globalConf.Sarama.ClientID, "kafka.clientid", "gibson-client", "A user-provided string sent with every request to the brokers for logging, debugging, and auditing purposes")
+	defaults.StringVar(&globalConf.Sarama.RackID, "kafka.rackid", "rack01", "A rack identifier for this client.")
+
+	defaults.IntVar(&globalConf.Sarama.ChannelBufferSize, "kafka.channelbuffersize", 1024, "The number of events to buffer in internal and external channels")
+	defaults.BoolVar(&globalConf.Sarama.ApiVersionsRequest, "kafka.apiversionrequest", true, "The version of Kafka that Sarama will assume it is running against")
+
 	return defaults
 }
 
@@ -91,6 +97,37 @@ func GetProducerFlags() *pflag.FlagSet {
 	producerFlags.StringVar(&globalConf.Others.Producer.Generator.Topic, "kafka.producer.generator.topic", "topic1", "Topic to publish to kafka")
 
 	return producerFlags
+}
+func GetKafkaAdminFlags() *pflag.FlagSet {
+	adminFlags := pflag.NewFlagSet("admin flags", pflag.ExitOnError)
+
+	adminFlags.IntVar(&globalConf.Sarama.Admin.Retry.Max, "kafka.admin.retry.max", 5, "The total number of times to retry sending (retriable) admin requests (default 5)")
+	adminFlags.DurationVar(&globalConf.Sarama.Admin.Retry.Backoff, "kafka.admin.retry.backoff", 100*time.Millisecond, "Backoff time between retries of a failed request (default 100ms)")
+	adminFlags.DurationVar(&globalConf.Sarama.Admin.Timeout, "kafka.admin.timeout", 3*time.Second, "The maximum duration the administrative Kafka client will wait for ClusterAdmin operations, including topics, brokers, configurations and ACLs (defaults to 3 seconds)")
+
+	return adminFlags
+}
+
+func GetKafkaNetFlags() *pflag.FlagSet {
+	netFlags := pflag.NewFlagSet("net flags", pflag.ExitOnError)
+
+	netFlags.IntVar(&globalConf.Sarama.Net.MaxOpenRequests, "kafka.net.maxopenrequests", 5, "How many outstanding requests a connection is allowed to have before sending on it blocks (default 5)")
+	netFlags.DurationVar(&globalConf.Sarama.Net.DialTimeout, "kafka.net.dialtimeout", 30*time.Second, "How long to wait for the initial connection")
+	netFlags.DurationVar(&globalConf.Sarama.Net.ReadTimeout, "kafka.net.readtimeout", 30*time.Second, "How long to wait for a response")
+	netFlags.DurationVar(&globalConf.Sarama.Net.WriteTimeout, "kafka.net.writetimeout", 30*time.Second, "How long to wait for a transmit")
+
+	return netFlags
+}
+
+func GetKafkaMetadataFlags() *pflag.FlagSet {
+	metaFlags := pflag.NewFlagSet("metadata flags", pflag.ExitOnError)
+
+	metaFlags.IntVar(&globalConf.Sarama.Metadata.Retry.Max, "kafka.metadata.retry.max", 3, "The total number of times to retry a metadata request when the cluster is in the middle of a leader election (default 3)")
+	metaFlags.DurationVar(&globalConf.Sarama.Metadata.Retry.Backoff, "kafka.metadata.retry.backoff", 250*time.Microsecond, "How long to wait for leader election to occur before retrying (default 250ms)")
+	metaFlags.DurationVar(&globalConf.Sarama.Metadata.RefreshFrequency, "kafka.metadata.refreshfrequency", 10*time.Minute, "How frequently to refresh the cluster metadata in the background. Defaults to 10 minutes")
+	metaFlags.BoolVar(&globalConf.Sarama.Metadata.Full, "kafka.metadata.full", true, "Whether to maintain a full set of metadata for all topics, or just he minimal set that has been necessary so far.")
+
+	return metaFlags
 }
 
 func GetConsumerFlags() *pflag.FlagSet {
