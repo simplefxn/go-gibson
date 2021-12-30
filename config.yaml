@@ -32,7 +32,7 @@ kafka:
       Step: 10ms
       Duration: 60s
       Topic: load-test-1
-    MaxMessageBytes: 1000000
+    MaxMessageBytes: 10485760
     RequiredAcks: waitforlocal
     Timeout: 10s
     Partitioner: roundrobin
