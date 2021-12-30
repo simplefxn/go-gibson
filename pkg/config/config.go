@@ -45,8 +45,9 @@ type Globals struct {
 
 type SSE struct {
 	Section struct {
-		URL      string `yaml:"url"`
-		ClientId string `yaml:"clientid"`
+		URL         string        `yaml:"url"`
+		ClientId    string        `yaml:"clientid"`
+		IdleTimeout time.Duration `yaml:"ideltimeout"`
 	} `yaml:"ServerSideEvent"`
 }
 

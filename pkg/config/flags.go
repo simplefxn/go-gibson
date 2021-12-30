@@ -64,9 +64,10 @@ func GetMetricsFlags() *pflag.FlagSet {
 func GetSSEFlags() *pflag.FlagSet {
 	flags := pflag.NewFlagSet("SSE parameters", pflag.ExitOnError)
 
-	flags.StringVar(&globalConf.SSE.Section.URL, "ris.url", "https://ris-live.ripe.net/v1/stream", "ris url to connect for sse")
+	flags.StringVar(&globalConf.SSE.Section.URL, "sse.url", "https://ris-live.ripe.net/v1/stream", "sse url to connect for sse")
 
-	flags.StringVar(&globalConf.SSE.Section.ClientId, "ris.clientstring", "ris-client", "ris url to connect for sse")
+	flags.StringVar(&globalConf.SSE.Section.ClientId, "sse.clientstring", "ris-client", "sse url to connect for sse")
+	flags.DurationVar(&globalConf.SSE.Section.IdleTimeout, "sse.idletimeout", 10*time.Second, "sse idle timeout")
 	return flags
 }
 

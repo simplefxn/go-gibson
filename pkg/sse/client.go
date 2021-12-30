@@ -37,9 +37,13 @@ type Client struct {
 }
 
 func New(ctx context.Context) *Client {
+	t := http.DefaultTransport.(*http.Transport).Clone()
+	t.IdleConnTimeout = config.Get().SSE.Section.IdleTimeout
+
 	c := &Client{
 		client: &http.Client{
-			Timeout: 5 * time.Minute,
+			// Timeout:   5 * time.Minute, TODO: We dont need to close the conection , just when is idle via the transport
+			Transport: t,
 		},
 		ctx: ctx,
 	}
