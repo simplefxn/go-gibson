@@ -22,15 +22,23 @@ type Gibson struct {
 	stats    *StatsInterceptor
 }
 
+func initCommand(cmd *cobra.Command) error {
+	config.SetLogLevel(cmd)
+
+	err := config.SetConsumerFlags(cmd.Flags())
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func New(ctx context.Context, cmd *cobra.Command, callback func(msg string) error) (*Gibson, error) {
 	conf := config.Get()
 
 	sarama.Logger = logger.NewSaramaLogger(logger.GetLogger())
 
-	config.SetLogLevel(cmd)
-
-	err := config.SetConsumerFlags(cmd.Flags())
-	if err != nil {
+	if err := initCommand(cmd); err != nil {
 		return nil, err
 	}
 
@@ -48,6 +56,7 @@ func New(ctx context.Context, cmd *cobra.Command, callback func(msg string) erro
 	interceptors := []sarama.ConsumerInterceptor{
 		stats,
 	}
+
 	if strings.ToLower(config.Get().Globals.LogLevel) == "debug" {
 		interceptors = append(interceptors, newLog())
 	}
