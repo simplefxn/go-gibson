@@ -4,11 +4,11 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
-	"time"
 
 	"github.com/Shopify/sarama"
 	"github.com/simplefxn/go-gibson/pkg/config"
 	"github.com/simplefxn/go-gibson/pkg/logger"
+	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"gopkg.in/yaml.v3"
 )
@@ -18,18 +18,22 @@ type ClusterAdmin struct {
 	conf  *config.Service
 	data  *Data
 }
+type Topic struct {
+	Name              string `yaml:"Name"`
+	Partitions        int    `yaml:"Partitions"`
+	ReplicationFactor int    `yaml:"Replication_factor"`
+}
 
 type Data struct {
 	Kafka struct {
-		Topic struct {
-			Name              string `yaml:"Name"`
-			Partitions        int    `yaml:"Partitions"`
-			ReplicationFactor int    `yaml:"Replication_factor"`
-		} `yaml:"Topic"`
+		Topics []Topic `yaml:"Topics"`
 	} `yaml:"kafka"`
 }
 
-func New(ctx context.Context, conf *config.Service) (*ClusterAdmin, error) {
+func New(ctx context.Context, cmd *cobra.Command) (*ClusterAdmin, error) {
+	config.SetLogLevel(cmd)
+
+	conf := config.Get()
 
 	sarama.Logger = logger.NewSaramaLogger(logger.GetLogger())
 
@@ -70,19 +74,17 @@ func (c *ClusterAdmin) Process() error {
 	if c.admin == nil {
 		return fmt.Errorf("call Process with an invalid cluster admin")
 	}
-	topic := c.data.Kafka.Topic
 
-	logger.Log.Debugf("Creating topic %s", topic.Name)
-	err := c.admin.CreateTopic(topic.Name, &sarama.TopicDetail{
-		NumPartitions:     int32(topic.Partitions),
-		ReplicationFactor: int16(topic.ReplicationFactor),
-	}, false)
-	if err != nil {
-		return err
+	for _, topic := range c.data.Kafka.Topics {
+		logger.Log.Debugf("Creating topic %s", topic.Name)
+		err := c.admin.CreateTopic(topic.Name, &sarama.TopicDetail{
+			NumPartitions:     int32(topic.Partitions),
+			ReplicationFactor: int16(topic.ReplicationFactor),
+		}, false)
+		if err != nil {
+			logger.Log.Debug(err)
+		}
 	}
-
-	logger.Log.Debug("Letting topics settle in (10s)")
-	time.Sleep(10 * time.Second)
 	c.admin.Close()
 
 	return nil

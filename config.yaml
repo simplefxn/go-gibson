@@ -2,10 +2,10 @@ ServerSideEvent:
   URL: https://ris-live.ripe.net/v1/stream
   ClientID: ris-client
 kafka:
-  Topic:
-    Name: load-test-1
-    Partitions: 3
-    Replication_factor: 3
+  Topics:
+    - Name: load-test-1
+      Partitions: 3
+      Replication_factor: 3
   Broker: cluster-kafka.kafka.svc.cluster.local
   Port: 9092
   Admin:

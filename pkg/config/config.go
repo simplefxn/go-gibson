@@ -80,7 +80,9 @@ type SaramaComplex struct {
 	// Consumer is the namespace for configuration related to consuming messages,
 	// used by the Consumer.
 	Consumer struct {
-		Topic   string
+		// Deprecated: Topic , use local string & flag
+		Topic string
+		// Deprecated: Verbose , use local string & flag
 		Verbose bool
 		// Group is the namespace for configuring consumer group.
 		Group struct {

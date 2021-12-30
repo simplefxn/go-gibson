@@ -22,7 +22,8 @@ type Gibson struct {
 	stats    *StatsInterceptor
 }
 
-func New(ctx context.Context, cmd *cobra.Command, conf *config.Service, callback func(msg string) error) (*Gibson, error) {
+func New(ctx context.Context, cmd *cobra.Command, callback func(msg string) error) (*Gibson, error) {
+	conf := config.Get()
 
 	sarama.Logger = logger.NewSaramaLogger(logger.GetLogger())
 
