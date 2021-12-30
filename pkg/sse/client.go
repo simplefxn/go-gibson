@@ -122,7 +122,6 @@ func getEvents(ctx context.Context, br *bufio.Reader, evCh chan<- *Event) error 
 	for {
 		currEvent, err := getEvent(br)
 		if err != nil {
-			logger.Log.Errorf("Error getting event: %s", err.Error())
 			return err
 		}
 		if ctx.Err() != nil {
@@ -151,6 +150,7 @@ func (c *Client) Start(url string, callback func(*Event)) {
 				logger.Log.Info("Context close, exiting sse")
 				return
 			}
+			logger.Log.Info("Connecting to SSE Server")
 			res, err := c.clientConnect(url)
 			if err != nil {
 				logger.Log.Info("Client connect skip until next cycle.")
@@ -173,7 +173,8 @@ func (c *Client) Start(url string, callback func(*Event)) {
 			err = getEvents(c.ctx, br, recvChan)
 			// If the goRoutine context is dome
 			if err != nil {
-				logger.Log.Info("Error from getting events from connection, skip until next cycle")
+				SSERestartCounter.Inc()
+				logger.Log.Info("Error from getEvents due to %s", err.Error())
 				//res.Body.Close()
 				continue
 			}
