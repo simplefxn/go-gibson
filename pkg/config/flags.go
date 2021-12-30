@@ -13,8 +13,6 @@ func GetGenericFlags() *pflag.FlagSet {
 
 	defaults.StringVar(&globalConf.Globals.LogLevel, "log.level", "info", "verbosity of logs, known levels are: debug, info, warn, error, fatal, panic")
 
-	defaults.DurationVar(&globalConf.Globals.ReportInterval, "report.interval", 60*time.Second, "report to console interval(60 seconds)")
-
 	return defaults
 }
 
@@ -68,6 +66,8 @@ func GetSSEFlags() *pflag.FlagSet {
 
 	flags.StringVar(&globalConf.SSE.Section.ClientId, "sse.clientstring", "ris-client", "sse url to connect for sse")
 	flags.DurationVar(&globalConf.SSE.Section.IdleTimeout, "sse.idletimeout", 10*time.Second, "sse idle timeout")
+	flags.DurationVar(&globalConf.SSE.Section.ReportInterval, "sse.report.interval", 60*time.Second, "report to console interval(60 seconds)")
+
 	return flags
 }
 

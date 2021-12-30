@@ -39,15 +39,15 @@ type Metrics struct {
 }
 
 type Globals struct {
-	ReportInterval time.Duration
-	LogLevel       string
+	LogLevel string
 }
 
 type SSE struct {
 	Section struct {
-		URL         string        `yaml:"url"`
-		ClientId    string        `yaml:"clientid"`
-		IdleTimeout time.Duration `yaml:"ideltimeout"`
+		URL            string        `yaml:"url"`
+		ClientId       string        `yaml:"clientid"`
+		IdleTimeout    time.Duration `yaml:"ideltimeout"`
+		ReportInterval time.Duration `yaml:"interval"`
 	} `yaml:"ServerSideEvent"`
 }
 

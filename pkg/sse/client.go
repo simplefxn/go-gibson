@@ -189,7 +189,7 @@ func (c *Client) Start(url string, callback func(*Event)) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		ticker := time.NewTicker(config.Get().Globals.ReportInterval)
+		ticker := time.NewTicker(config.Get().SSE.Section.ReportInterval)
 	report:
 		for {
 			select {
