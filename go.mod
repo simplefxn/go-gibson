@@ -4,7 +4,6 @@ go 1.17
 
 require (
 	github.com/Shopify/sarama v1.30.1
-	github.com/brianvoe/gofakeit/v6 v6.10.0
 	github.com/pkg/errors v0.8.1
 	github.com/prometheus/client_golang v1.4.0
 	github.com/spf13/cobra v1.3.0

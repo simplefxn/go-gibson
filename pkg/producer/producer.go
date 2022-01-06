@@ -20,6 +20,8 @@ func New(cmd *cobra.Command) (*Gibson, error) {
 
 	stats := newStats()
 
+	config.Dump(cmd)
+
 	saramaProd, err := newProducer(config.Get(), stats)
 	if err != nil {
 		return nil, err
@@ -34,8 +36,6 @@ func New(cmd *cobra.Command) (*Gibson, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	config.Dump(cmd)
 
 	return &producer, nil
 }
