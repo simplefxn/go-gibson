@@ -18,9 +18,9 @@ type Gibson struct {
 func New(cmd *cobra.Command) (*Gibson, error) {
 	config.SetLogLevel(cmd)
 
-	stats := newStats()
-
 	config.Dump(cmd)
+
+	stats := newStats()
 
 	saramaProd, err := newProducer(config.Get(), stats)
 	if err != nil {
