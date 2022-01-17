@@ -9,7 +9,7 @@ import (
 func GetGenericFlags() *pflag.FlagSet {
 
 	defaults := pflag.NewFlagSet("defaults for all commands", pflag.ExitOnError)
-	defaults.StringVar(&cfgFile, "config", "", "config file (default is $HOME/.kafkaLoad.yaml)")
+	defaults.StringVar(&cfgFile, "config", "", "config file (default is $HOME/.config.yaml)")
 
 	defaults.StringVar(&globalConf.Globals.LogLevel, "log.level", "info", "verbosity of logs, known levels are: debug, info, warn, error, fatal, panic")
 
