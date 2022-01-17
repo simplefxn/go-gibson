@@ -44,6 +44,14 @@ func (r Gibson) Input() chan<- *sarama.ProducerMessage {
 	return r.producer.Input()
 }
 
+func (r Gibson) Errors() <-chan *sarama.ProducerError {
+	return r.producer.Errors()
+}
+
+func (r Gibson) Successes() <-chan *sarama.ProducerMessage {
+	return r.producer.Successes()
+}
+
 func (r Gibson) Close() error {
 	logger.Log.Infof("Total messages: %v", r.stats.GetTotal())
 	return r.producer.Close()

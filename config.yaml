@@ -40,6 +40,7 @@ kafka:
       Max: 6
       Backoff: 100ms
     Return.Errors: false
+    Return.Success: true
     CompressionLevel: none
     Flush:
       Bytes: 0
