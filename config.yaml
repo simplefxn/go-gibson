@@ -1,7 +1,9 @@
-SSE:
+ServerSideEvent:
   URL: https://ris-live.ripe.net/v1/stream
   ClientID: ris-client
   Idletimeout: 10s
+  Report:
+    Interval: 1m
 kafka:
   Topics:
     - Name: load-test-1

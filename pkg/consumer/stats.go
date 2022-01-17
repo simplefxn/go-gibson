@@ -29,6 +29,7 @@ func (s *StatsInterceptor) GetTotal() uint64 {
 }
 
 func (s *StatsInterceptor) OnConsume(msg *sarama.ConsumerMessage) {
+
 	s.total.Inc()
 	s.promTotalCounter.Inc()
 }

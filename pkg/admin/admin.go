@@ -35,6 +35,8 @@ func New(ctx context.Context, cmd *cobra.Command) (*ClusterAdmin, error) {
 
 	conf := config.Get()
 
+	config.Dump(cmd)
+
 	sarama.Logger = logger.NewSaramaLogger(logger.GetLogger())
 
 	tlsConfig := config.CreateTlsConfiguration(conf)

@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"strconv"
 	"sync"
 	"time"
 
@@ -190,6 +189,7 @@ func (c *Client) Start(url string, callback func(*Event)) {
 	go func() {
 		defer wg.Done()
 		ticker := time.NewTicker(config.Get().SSE.Section.ReportInterval)
+		minuteTicker := time.NewTicker(time.Minute * 1)
 	report:
 		for {
 			select {
@@ -200,8 +200,21 @@ func (c *Client) Start(url string, callback func(*Event)) {
 				break report
 			case <-ticker.C:
 				x := eventCounter.Load()
-				logger.Log.Infof("Rate %s msg/int", strconv.FormatUint(x, 10))
+				measurementsMutex.Lock()
+				measurements = append(measurements, x)
+				measurementsMutex.Unlock()
+				// reset counter
 				eventCounter.Store(0)
+			case <-minuteTicker.C:
+				measurementsMutex.Lock()
+				var total uint64
+				for _, n := range measurements {
+					total = total + n
+				}
+				avg := total / uint64(len(measurements))
+				logger.Log.Infof("SSE Avg Rate %d msg/min", avg)
+				measurements = nil
+				measurementsMutex.Unlock()
 			}
 		}
 	}()
