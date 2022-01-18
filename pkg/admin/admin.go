@@ -21,7 +21,7 @@ type ClusterAdmin struct {
 type Topic struct {
 	Name              string `yaml:"Name"`
 	Partitions        int    `yaml:"Partitions"`
-	ReplicationFactor int    `yaml:"Replication_factor"`
+	ReplicationFactor int    `yaml:"ReplicationFactor"`
 }
 
 type Data struct {

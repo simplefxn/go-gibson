@@ -8,7 +8,7 @@ kafka:
   Topics:
     - Name: load-test-1
       Partitions: 3
-      Replication_factor: 3
+      ReplicationFactor: 3
   Broker: cluster-kafka.kafka.svc.cluster.local
   Port: 9092
   Admin:
