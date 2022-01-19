@@ -18,7 +18,7 @@ type Gibson struct {
 	client   sarama.ConsumerGroup
 	topic    string
 	ctx      context.Context
-	callback func(msg string) error
+	callback func(msg []byte) error
 	stats    *StatsInterceptor
 }
 
@@ -33,7 +33,7 @@ func initCommand(cmd *cobra.Command) error {
 	return nil
 }
 
-func New(ctx context.Context, cmd *cobra.Command, callback func(msg string) error) (*Gibson, error) {
+func New(ctx context.Context, cmd *cobra.Command, callback func(msg []byte) error) (*Gibson, error) {
 	conf := config.Get()
 
 	sarama.Logger = logger.NewSaramaLogger(logger.GetLogger())
@@ -137,7 +137,7 @@ func (c *Gibson) ConsumeClaim(session sarama.ConsumerGroupSession, claim sarama.
 	// The `ConsumeClaim` itself is called within a goroutine, see:
 	// https://github.com/Shopify/sarama/blob/main/consumer_group.go#L27-L29
 	for message := range claim.Messages() {
-		if err := c.callback(string(message.Value)); err != nil {
+		if err := c.callback(message.Value); err != nil {
 			return err
 		}
 		session.MarkMessage(message, "")
