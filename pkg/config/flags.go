@@ -227,3 +227,21 @@ func SetProducerFlags(flags *pflag.FlagSet) error {
 
 	return nil
 }
+
+func GetSenderFlags() *pflag.FlagSet {
+	flags := pflag.NewFlagSet("UDP Sender", pflag.ExitOnError)
+
+	flags.StringVar(&globalConf.Sender.Address, "sender.address", "sender.default.cluster.local", "service to send the messages to")
+	flags.IntVar(&globalConf.Sender.Port, "sender.port", 5000, "port to send the messages to")
+
+	return flags
+}
+
+func GetReceiverFlags() *pflag.FlagSet {
+	flags := pflag.NewFlagSet("UDP Receiver", pflag.ExitOnError)
+
+	flags.StringVar(&globalConf.Receiver.Address, "receiver.address", "receiver.default.cluster.local", "service who will receive the messages")
+	flags.IntVar(&globalConf.Receiver.Port, "receiver.port", 5000, "port to receive messages")
+
+	return flags
+}

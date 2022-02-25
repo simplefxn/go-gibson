@@ -25,11 +25,23 @@ var (
 )
 
 type Service struct {
-	Metrics Metrics
-	Sarama  *sarama.Config
-	Others  *SaramaComplex
-	Globals Globals
-	SSE     SSE
+	Metrics  Metrics
+	Sarama   *sarama.Config
+	Others   *SaramaComplex
+	Globals  Globals
+	SSE      SSE
+	Sender   Sender
+	Receiver Receiver
+}
+
+type Sender struct {
+	Address string `yaml:"address"`
+	Port    int    `yaml:"port"`
+}
+
+type Receiver struct {
+	Address string `yaml:"address"`
+	Port    int    `yaml:"port"`
 }
 
 type Metrics struct {
