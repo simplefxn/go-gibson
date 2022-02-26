@@ -20,6 +20,7 @@ const (
 	dName = "data"
 )
 
+// Event structure for SSE
 type Event struct {
 	Type string `json:"type"`
 	Data string `json:"data"`
@@ -30,12 +31,13 @@ var (
 	ErrNilChan = fmt.Errorf("nil channel given")
 )
 
+// Client for SSE
 type Client struct {
 	client *http.Client
-	ctx    context.Context
 }
 
-func New(ctx context.Context) *Client {
+// New creates a new SSE client
+func New() *Client {
 	t := http.DefaultTransport.(*http.Transport).Clone()
 	t.IdleConnTimeout = config.Get().SSE.Section.IdleTimeout
 
@@ -44,7 +46,6 @@ func New(ctx context.Context) *Client {
 			// Timeout:   5 * time.Minute, TODO: We dont need to close the conection , just when is idle via the transport
 			Transport: t,
 		},
-		ctx: ctx,
 	}
 
 	return c
@@ -121,6 +122,11 @@ func getEvent(br *bufio.Reader) (*Event, error) {
 }
 
 func getEvents(ctx context.Context, br *bufio.Reader, evCh chan<- *Event) error {
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Printf("Recovering from panic in getEvents error is: %v \n", r)
+		}
+	}()
 
 	for {
 		currEvent, err := getEvent(br)
@@ -138,18 +144,20 @@ func getEvents(ctx context.Context, br *bufio.Reader, evCh chan<- *Event) error 
 	}
 }
 
-func (c *Client) Start(url string, callback func(*Event)) {
+func (c *Client) Start(ctx context.Context, url string, callback func(*Event)) {
 	var wg sync.WaitGroup
 	// Make a receive channel for getting messages from the http response
 	recvChan := make(chan *Event)
-	ctxDone := false
 
 	// Connection goroutine, connect, fecth events , repeat
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
+		defer func() {
+			logger.Log.Info("Exiting goroutine 0")
+		}()
 		for {
-			if ctxDone {
+			if ctx.Err() != nil {
 				logger.Log.Info("Context close, exiting sse")
 				return
 			}
@@ -160,25 +168,16 @@ func (c *Client) Start(url string, callback func(*Event)) {
 				continue
 			}
 
-			// GoRoutine that will listen for the context and close the response if the context
-			// is closed
-			go func(ctx context.Context, res *http.Response) {
-				<-ctx.Done()
-				ctxDone = true
-				logger.Log.Info("Closing service side response")
-				res.Body.Close()
-			}(c.ctx, res)
-
 			// Create bufio reader
 			br := bufio.NewReader(res.Body)
 			// Loop for all events and send them to the recv Channel
 			// this blocks until the response is close
-			err = getEvents(c.ctx, br, recvChan)
-			// If the goRoutine context is dome
+			err = getEvents(ctx, br, recvChan)
+			// If the goRoutine context is done
 			if err != nil {
 				SSERestartCounter.Inc()
 				logger.Log.Info("Error from getEvents due to %s", err.Error())
-				//res.Body.Close()
+				res.Body.Close()
 				continue
 			}
 		}
@@ -188,16 +187,18 @@ func (c *Client) Start(url string, callback func(*Event)) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
+		defer func() {
+			logger.Log.Info("Exiting goroutine 1")
+		}()
 		ticker := time.NewTicker(config.Get().SSE.Section.ReportInterval)
 		minuteTicker := time.NewTicker(time.Minute * 1)
-	report:
 		for {
 			select {
-			case <-c.ctx.Done():
-				logger.Log.Info("Reporting received context closing, stoping now")
-				//close(recvChan) TODO: This channel is leaking
+			case <-ctx.Done():
+				logger.Log.Info("Report routine received context closing, stoping now")
+				close(recvChan) // TODO: This channel is leaking
 				ticker.Stop()
-				break report
+				return
 			case <-ticker.C:
 				x := eventCounter.Load()
 				measurementsMutex.Lock()
@@ -223,12 +224,15 @@ func (c *Client) Start(url string, callback func(*Event)) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
+		defer func() {
+			logger.Log.Info("Exiting goroutine 2")
+		}()
 	reader:
 		for {
 			select {
-			case <-c.ctx.Done():
+			case <-ctx.Done():
 				logger.Log.Info("SSE reader received context closing, stoping now")
-				//close(recvChan) TODO: This channel is leaking
+				close(recvChan) //TODO: This channel is leaking
 				break reader
 			// If we receive a message, call back to user function
 			case msg := <-recvChan:
@@ -239,4 +243,5 @@ func (c *Client) Start(url string, callback func(*Event)) {
 	}()
 
 	wg.Wait()
+	logger.Log.Infof("Out of SSE client")
 }
