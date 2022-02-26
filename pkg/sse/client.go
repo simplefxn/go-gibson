@@ -153,10 +153,8 @@ func (c *Client) Start(ctx context.Context, url string, callback func(*Event)) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		defer func() {
-			logger.Log.Info("Exiting goroutine 0")
-		}()
 		for {
+			// Exit if the context is close
 			if ctx.Err() != nil {
 				logger.Log.Info("Context close, exiting sse")
 				return
@@ -187,9 +185,6 @@ func (c *Client) Start(ctx context.Context, url string, callback func(*Event)) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		defer func() {
-			logger.Log.Info("Exiting goroutine 1")
-		}()
 		ticker := time.NewTicker(config.Get().SSE.Section.ReportInterval)
 		minuteTicker := time.NewTicker(time.Minute * 1)
 		for {
@@ -225,15 +220,16 @@ func (c *Client) Start(ctx context.Context, url string, callback func(*Event)) {
 	go func() {
 		defer wg.Done()
 		defer func() {
-			logger.Log.Info("Exiting goroutine 2")
+			if r := recover(); r != nil {
+				fmt.Printf("Recovering from panic error is: %v \n", r)
+			}
 		}()
-	reader:
 		for {
 			select {
 			case <-ctx.Done():
 				logger.Log.Info("SSE reader received context closing, stoping now")
 				close(recvChan) //TODO: This channel is leaking
-				break reader
+				return
 			// If we receive a message, call back to user function
 			case msg := <-recvChan:
 				callback(msg)
