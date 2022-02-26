@@ -124,7 +124,7 @@ func getEvent(br *bufio.Reader) (*Event, error) {
 func getEvents(ctx context.Context, br *bufio.Reader, evCh chan<- *Event) error {
 	defer func() {
 		if r := recover(); r != nil {
-			fmt.Printf("Recovering from panic in getEvents error is: %v \n", r)
+			logger.Log.Infof("Recovering from panic in getEvents error is: %v \n", r)
 		}
 	}()
 
@@ -219,16 +219,11 @@ func (c *Client) Start(ctx context.Context, url string, callback func(*Event)) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		defer func() {
-			if r := recover(); r != nil {
-				fmt.Printf("Recovering from panic error is: %v \n", r)
-			}
-		}()
 		for {
 			select {
 			case <-ctx.Done():
 				logger.Log.Info("SSE reader received context closing, stoping now")
-				close(recvChan) //TODO: This channel is leaking
+				//close(recvChan) //TODO: This channel is leaking
 				return
 			// If we receive a message, call back to user function
 			case msg := <-recvChan:

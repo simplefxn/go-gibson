@@ -8,20 +8,20 @@ import (
 
 	"github.com/simplefxn/go-gibson/pkg/config"
 	"github.com/simplefxn/go-gibson/pkg/logger"
-	"github.com/spf13/cobra"
 )
 
 // Receiver struct
 type Gibson struct {
 	conn     *net.UDPConn
 	stats    *Stats
-	callback func(msg []byte) error
+	callback func(msg []byte)
 }
 
-func New(cmd *cobra.Command, callback func(msg []byte) error) (*Gibson, error) {
+// New creates a receiver
+func New(callback func(msg []byte)) (*Gibson, error) {
 	conf := config.Get()
 
-	sAddr := fmt.Sprintf("%s:%d", conf.Receiver.Address, conf.Receiver.Port)
+	sAddr := fmt.Sprintf("%s:%d", conf.Sender.Address, conf.Sender.Port)
 	s, err := net.ResolveUDPAddr("udp4", sAddr)
 	if err != nil {
 		return nil, err
@@ -30,6 +30,7 @@ func New(cmd *cobra.Command, callback func(msg []byte) error) (*Gibson, error) {
 	if err != nil {
 		return nil, err
 	}
+	logger.Log.Infof("Starting server on %s", s.String())
 	stats := newStats()
 
 	u := &Gibson{
