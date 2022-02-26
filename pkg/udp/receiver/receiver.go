@@ -14,11 +14,18 @@ import (
 type Gibson struct {
 	conn     *net.UDPConn
 	stats    *Stats
-	callback func(msg []byte)
+	callback func(msg *Message)
+}
+
+// Message struct
+type Message struct {
+	Size  int
+	Addr  *net.UDPAddr
+	Value []byte
 }
 
 // New creates a receiver
-func New(callback func(msg []byte)) (*Gibson, error) {
+func New(callback func(msg *Message)) (*Gibson, error) {
 	conf := config.Get()
 
 	sAddr := fmt.Sprintf("%s:%d", conf.Sender.Address, conf.Sender.Port)
@@ -42,7 +49,7 @@ func New(callback func(msg []byte)) (*Gibson, error) {
 	return u, nil
 }
 
-func (g *Gibson) read(chan []byte) error {
+func (g *Gibson) read(msgChannel chan *Message) error {
 	buffer := make([]byte, 2048)
 	for {
 		n, addr, err := g.conn.ReadFromUDP(buffer)
@@ -52,12 +59,18 @@ func (g *Gibson) read(chan []byte) error {
 			return err
 		}
 		g.stats.IncMsg(n)
+
+		msgChannel <- &Message{
+			Size:  n,
+			Addr:  addr,
+			Value: buffer,
+		}
 	}
 }
 
 // Run main loop for the receiver , call the callback for every message
 func (g *Gibson) Run(ctx context.Context) error {
-	msgChannel := make(chan []byte)
+	msgChannel := make(chan *Message)
 
 	// Read
 	go func() {

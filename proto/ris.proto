@@ -4,5 +4,5 @@ package ris;
 option go_package = "proto/ris";
 
 message MessageEncapsulation {
-  bytes msg = 1; 
+  string msg = 1; 
 }

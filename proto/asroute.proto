@@ -1,0 +1,16 @@
+syntax = "proto3";
+package ris;
+
+option go_package = "proto/asroute";
+
+message ASRoute {
+  enum Operation {
+      UPDATE = 0;
+      DELETE = 1;
+  }
+  Operation Op = 1;
+  string ASRouter = 2;
+  string NextAS = 3;
+  string Prefix = 4;
+  bytes Raw =5;
+}

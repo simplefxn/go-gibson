@@ -6,6 +6,7 @@ import (
 	"net"
 
 	"github.com/simplefxn/go-gibson/pkg/config"
+	"github.com/simplefxn/go-gibson/pkg/logger"
 )
 
 // Gibson structure
@@ -30,6 +31,9 @@ func New() (*Gibson, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	logger.Log.Infof("Remote UDP address : %s \n", c.RemoteAddr().String())
+	logger.Log.Infof("Local UDP client address : %s \n", c.LocalAddr().String())
 
 	Gibson := &Gibson{
 		conn:  c,
