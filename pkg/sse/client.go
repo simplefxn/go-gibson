@@ -159,12 +159,14 @@ func (c *Client) Start(ctx context.Context, url string, callback func(*Event)) {
 				logger.Log.Info("Context close, exiting sse")
 				return
 			}
-			logger.Log.Info("Connecting to SSE Server")
+
 			res, err := c.clientConnect(url)
 			if err != nil {
 				logger.Log.Info("Client connect skip until next cycle.")
 				continue
 			}
+
+			logger.Log.Infof("Connected to SSE server@%s", res.Request.URL)
 
 			// Create bufio reader
 			br := bufio.NewReader(res.Body)
