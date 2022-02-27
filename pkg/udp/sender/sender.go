@@ -32,8 +32,8 @@ func New() (*Gibson, error) {
 		return nil, err
 	}
 
-	logger.Log.Infof("Remote UDP address : %s \n", c.RemoteAddr().String())
-	logger.Log.Infof("Local UDP client address : %s \n", c.LocalAddr().String())
+	logger.Log.Infof("Remote UDP address : %s", c.RemoteAddr().String())
+	logger.Log.Infof("Local UDP client address : %s", c.LocalAddr().String())
 
 	Gibson := &Gibson{
 		conn:  c,
