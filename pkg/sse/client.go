@@ -166,7 +166,7 @@ func (c *Client) Start(ctx context.Context, url string, callback func(*Event)) {
 				continue
 			}
 
-			logger.Log.Infof("Connected to SSE server@%s", res.Request.URL)
+			logger.Log.Infof("Connected to SSE server@%s", res.Request.Host)
 
 			// Create bufio reader
 			br := bufio.NewReader(res.Body)
@@ -176,7 +176,7 @@ func (c *Client) Start(ctx context.Context, url string, callback func(*Event)) {
 			// If the goRoutine context is done
 			if err != nil {
 				SSERestartCounter.Inc()
-				logger.Log.Info("Error from getEvents due to %s", err.Error())
+				logger.Log.Infof("Error from getEvents due to %s", err.Error())
 				res.Body.Close()
 				continue
 			}

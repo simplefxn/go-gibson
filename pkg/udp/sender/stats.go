@@ -19,15 +19,15 @@ func newStats() *Stats {
 	// Initialize metrics counter
 	s := &Stats{
 		promTotalBytes: promauto.NewCounter(prometheus.CounterOpts{
-			Name: "ugibson_total_bytes_sent",
+			Name: "udp_sender_total_bytes_sent",
 			Help: "The total number of bytes sent",
 		}),
 		promTotalMsgs: promauto.NewCounter(prometheus.CounterOpts{
-			Name: "ugibson_total_msgs_sent",
+			Name: "udp_sender_total_msgs_sent",
 			Help: "The total number of msgs sent",
 		}),
 		promErrMsg: promauto.NewCounter(prometheus.CounterOpts{
-			Name: "ugibson_total_msg_errors",
+			Name: "udp_sender_total_msg_errors",
 			Help: "The total number of msgs errors",
 		}),
 	}
