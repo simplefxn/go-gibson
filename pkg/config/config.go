@@ -32,6 +32,7 @@ type Service struct {
 	SSE      SSE
 	Sender   Sender
 	Receiver Receiver
+	Nats     Nats
 }
 
 type Sender struct {
@@ -52,6 +53,20 @@ type Metrics struct {
 
 type Globals struct {
 	LogLevel string
+}
+
+type Nats struct {
+	URL        string `yaml:"url"`
+	Publisher  Publisher
+	Subscriber Subscriber
+}
+
+type Publisher struct {
+	Topic string `yaml:"topic"`
+}
+
+type Subscriber struct {
+	Topic string `yaml:"topic"`
 }
 
 type SSE struct {

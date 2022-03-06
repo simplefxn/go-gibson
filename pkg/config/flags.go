@@ -245,3 +245,25 @@ func GetReceiverFlags() *pflag.FlagSet {
 
 	return flags
 }
+
+func GetNatsGenericFlags() *pflag.FlagSet {
+	flags := pflag.NewFlagSet("Nats Generic", pflag.ExitOnError)
+
+	flags.StringVar(&globalConf.Nats.URL, "nats.server.url", "http://nats.svc.default.cluster.local:9090", "nats server url")
+
+	return flags
+}
+
+func GetNatsPublisherFlags() *pflag.FlagSet {
+	flags := pflag.NewFlagSet("Nats Publisher", pflag.ExitOnError)
+
+	flags.StringVar(&globalConf.Nats.Publisher.Topic, "nats.publisher.topic", "topic1", "publishing topic to nats server")
+	return flags
+}
+
+func GetNatsSubscriberFlags() *pflag.FlagSet {
+	flags := pflag.NewFlagSet("Nats Subscriber", pflag.ExitOnError)
+
+	flags.StringVar(&globalConf.Nats.Subscriber.Topic, "nats.subscriber.topic", "topic1", "subscriber topic to nats server")
+	return flags
+}

@@ -1,3 +1,9 @@
+Nats:
+  Server: nats.svc.server.cluster.local
+  Publisher:
+    Topic: Test
+  Subscriber:
+    Topic: Test
 ServerSideEvent:
   URL: https://ris-live.ripe.net/v1/stream
   ClientID: ris-client
