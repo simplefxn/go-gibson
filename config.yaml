@@ -1,9 +1,15 @@
 Nats:
-  Server: nats.svc.server.cluster.local
+  Server: nats://nats.svc.server.cluster.local:4222
   Publisher:
     Topic: Test
   Subscriber:
     Topic: Test
+Metrics:
+  Enable: true
+  Path: "/metrics"
+  Port: 8080
+Log:
+  Level: debug
 ServerSideEvent:
   URL: https://ris-live.ripe.net/v1/stream
   ClientID: ris-client

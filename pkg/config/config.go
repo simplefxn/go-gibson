@@ -146,7 +146,7 @@ func init() {
 	globalConf = Service{
 		Sarama: sarama.NewConfig(),
 		Others: &SaramaComplex{},
-		Nats: &Nats{},
+		Nats:   &Nats{},
 	}
 }
 
@@ -284,22 +284,22 @@ func SetLogLevel(cmd *cobra.Command) error {
 	}
 	switch strings.ToLower(logLevel) {
 	case "debug":
-		logger.Log.Info("Setting log level to debug")
+		logger.Log.Infof("%s sets log level to debug", cmd.Name())
 		logger.SetLogLevel(zapcore.DebugLevel)
 	case "info":
-		logger.Log.Info("Setting log level to info")
+		logger.Log.Infof("%s sets log level to info", cmd.Name())
 		logger.SetLogLevel(zapcore.InfoLevel)
 	case "warn":
-		logger.Log.Info("Setting log level to warn")
+		logger.Log.Infof("%s sets log level to warn", cmd.Name())
 		logger.SetLogLevel(zapcore.WarnLevel)
 	case "error":
-		logger.Log.Info("Setting log level to error")
+		logger.Log.Infof("%s sets log level to error", cmd.Name())
 		logger.SetLogLevel(zapcore.ErrorLevel)
 	case "fatal":
-		logger.Log.Info("Setting log level to fatal")
+		logger.Log.Infof("%s sets log level to fatal", cmd.Name())
 		logger.SetLogLevel(zapcore.FatalLevel)
 	case "panic":
-		logger.Log.Info("Setting log level to panic")
+		logger.Log.Infof("%s sets log level to panic", cmd.Name())
 		logger.SetLogLevel(zapcore.PanicLevel)
 	default:
 		log.Fatal("Dont know this log level:", logLevel, "known levels are: debug, info, warn, error, fatal, panic")
@@ -331,4 +331,7 @@ func BindFlags(cmd *cobra.Command, v *viper.Viper) {
 			cmd.Flags().Set(f.Name, fmt.Sprintf("%v", val))
 		}
 	})
+	// Every time we bind flags there are actions against flags that have to be executed
+	// right now only the debug level has to be set
+	SetLogLevel(cmd)
 }

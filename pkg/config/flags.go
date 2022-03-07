@@ -249,7 +249,7 @@ func GetReceiverFlags() *pflag.FlagSet {
 func GetNatsGenericFlags() *pflag.FlagSet {
 	flags := pflag.NewFlagSet("Nats Generic", pflag.ExitOnError)
 
-	flags.StringVar(&globalConf.Nats.URL, "nats.server.url", "http://nats.svc.default.cluster.local:9090", "nats server url")
+	flags.StringVar(&globalConf.Nats.URL, "nats.server", "http://nats.svc.default.cluster.local:9090", "nats server url")
 
 	return flags
 }

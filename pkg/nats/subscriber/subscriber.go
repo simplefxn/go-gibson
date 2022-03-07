@@ -5,6 +5,7 @@ import (
 
 	"github.com/nats-io/nats.go"
 	"github.com/simplefxn/go-gibson/pkg/config"
+	"github.com/simplefxn/go-gibson/pkg/logger"
 )
 
 // Gibson structure
@@ -21,7 +22,11 @@ func New(callback func(msg *nats.Msg)) (*Gibson, error) {
 	natsConfig := config.Get().Nats
 
 	// Connect to a server
-	nc, _ := nats.Connect(natsConfig.URL)
+	logger.Log.Debugf("Connecting to nats@%s", natsConfig.URL)
+	nc, err := nats.Connect(natsConfig.URL)
+	if err != nil {
+		return nil, err
+	}
 
 	Gibson := &Gibson{
 		conn:     nc,

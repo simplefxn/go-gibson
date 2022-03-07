@@ -7,6 +7,7 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/simplefxn/go-gibson/pkg/config"
+	"github.com/simplefxn/go-gibson/pkg/logger"
 )
 
 type Server struct {
@@ -37,5 +38,6 @@ func (s *Server) ListenAndServe() {
 }
 
 func (s *Server) Shutdown(ctx context.Context) error {
+	logger.Log.Infof("DEBUG %v", s)
 	return s.srv.Shutdown(ctx)
 }
