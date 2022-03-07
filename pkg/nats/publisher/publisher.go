@@ -17,16 +17,16 @@ type Gibson struct {
 
 // New creates a new UDP sender
 func New() (*Gibson, error) {
-	conf := config.Get()
+	natsConfig := config.Get().Nats
 
 	// Connect to a server
-	nc, _ := nats.Connect(conf.Nats.URL)
+	nc, _ := nats.Connect(natsConfig.URL)
 
 	Gibson := &Gibson{
 		conn:  nc,
 		input: make(chan []byte),
 		stats: newStats(),
-		topic: config.Nats.Publisher.Topic,
+		topic: natsConfig.Publisher.Topic,
 	}
 
 	return Gibson, nil

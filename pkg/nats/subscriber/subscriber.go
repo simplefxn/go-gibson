@@ -18,10 +18,10 @@ type Gibson struct {
 
 // New creates a new UDP sender
 func New(callback func(msg *nats.Msg)) (*Gibson, error) {
-	conf := config.Get()
+	natsConfig := config.Get().Nats
 
 	// Connect to a server
-	nc, _ := nats.Connect(conf.Nats.URL)
+	nc, _ := nats.Connect(natsConfig.URL)
 
 	// Simple Publisher
 	nc.Publish("foo", []byte("Hello World"))
@@ -30,7 +30,7 @@ func New(callback func(msg *nats.Msg)) (*Gibson, error) {
 		conn:     nc,
 		input:    make(chan []byte),
 		stats:    newStats(),
-		topic:    config.Nats.Subscriber.Topic,
+		topic:    natsConfig.Subscriber.Topic,
 		callback: callback,
 	}
 
