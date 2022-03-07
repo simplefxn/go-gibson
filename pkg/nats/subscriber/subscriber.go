@@ -23,9 +23,6 @@ func New(callback func(msg *nats.Msg)) (*Gibson, error) {
 	// Connect to a server
 	nc, _ := nats.Connect(natsConfig.URL)
 
-	// Simple Publisher
-	nc.Publish("foo", []byte("Hello World"))
-
 	Gibson := &Gibson{
 		conn:     nc,
 		input:    make(chan []byte),
