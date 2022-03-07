@@ -32,7 +32,7 @@ type Service struct {
 	SSE      SSE
 	Sender   Sender
 	Receiver Receiver
-	Nats     Nats
+	Nats     *Nats
 }
 
 type Sender struct {
@@ -56,9 +56,9 @@ type Globals struct {
 }
 
 type Nats struct {
-	URL        string `yaml:"url"`
-	Publisher  Publisher
-	Subscriber Subscriber
+	URL        string     `yaml:"url"`
+	Publisher  Publisher  `yaml:"publisher"`
+	Subscriber Subscriber `yaml:"subscriber"`
 }
 
 type Publisher struct {
@@ -146,6 +146,7 @@ func init() {
 	globalConf = Service{
 		Sarama: sarama.NewConfig(),
 		Others: &SaramaComplex{},
+		Nats: &Nats{},
 	}
 }
 
