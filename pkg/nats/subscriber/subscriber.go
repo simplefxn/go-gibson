@@ -6,6 +6,7 @@ import (
 	"github.com/nats-io/nats.go"
 	"github.com/simplefxn/go-gibson/pkg/config"
 	"github.com/simplefxn/go-gibson/pkg/logger"
+	natsGibson "github.com/simplefxn/go-gibson/pkg/nats"
 )
 
 // Gibson structure
@@ -21,9 +22,12 @@ type Gibson struct {
 func New(callback func(msg *nats.Msg)) (*Gibson, error) {
 	natsConfig := config.Get().Nats
 
+	natsTLSconfig := natsGibson.CreateTlsConfiguration(natsConfig)
+
 	// Connect to a server
 	logger.Log.Debugf("Connecting to nats@%s", natsConfig.URL)
-	nc, err := nats.Connect(natsConfig.URL)
+
+	nc, err := nats.Connect(natsConfig.URL, nats.Secure(natsTLSconfig))
 	if err != nil {
 		return nil, err
 	}

@@ -56,9 +56,14 @@ type Globals struct {
 }
 
 type Nats struct {
-	URL        string     `yaml:"url"`
-	Publisher  Publisher  `yaml:"publisher"`
-	Subscriber Subscriber `yaml:"subscriber"`
+	URL            string        `yaml:"url"`
+	CA             string        `yaml:"ca"`
+	Cert           string        `yaml:"cert"`
+	Key            string        `yaml:"key"`
+	VerifySSL      bool          `yaml:"verifyssl"`
+	Publisher      Publisher     `yaml:"publisher"`
+	Subscriber     Subscriber    `yaml:"subscriber"`
+	ReportInterval time.Duration `yaml:"interval"`
 }
 
 type Publisher struct {

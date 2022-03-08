@@ -39,5 +39,9 @@ func (s *Server) ListenAndServe() {
 
 func (s *Server) Shutdown(ctx context.Context) error {
 	logger.Log.Infof("DEBUG %v", s)
-	return s.srv.Shutdown(ctx)
+	if s != nil {
+		err := s.srv.Shutdown(ctx)
+		return err
+	}
+	return fmt.Errorf("server has not stareted yet")
 }

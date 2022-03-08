@@ -1,5 +1,6 @@
 Nats:
   Server: nats://nats.svc.server.cluster.local:4222
+  CA: /etc/nats/ca.pem
   Publisher:
     Topic: Test
   Subscriber:

@@ -250,6 +250,15 @@ func GetNatsGenericFlags() *pflag.FlagSet {
 	flags := pflag.NewFlagSet("Nats Generic", pflag.ExitOnError)
 
 	flags.StringVar(&globalConf.Nats.URL, "nats.server", "http://nats.svc.default.cluster.local:9090", "nats server url")
+	flags.StringVar(&globalConf.Nats.CA, "nats.ca", "", "ca pem file for nats server")
+	// Kafka.Cert is the cert to use if TLS is enabled
+	flags.StringVar(&globalConf.Nats.Cert, "nats.cert", "", "server certificate to use for nats connections")
+
+	// Kafka.key is the key to use if TLS is enabled
+	flags.StringVar(&globalConf.Nats.Key, "nats.key", "", "server private key to use for nats connections")
+
+	flags.BoolVar(&globalConf.Nats.VerifySSL, "nats.verifyssl", true, "Optional verify ssl certificates chain")
+	flags.DurationVar(&globalConf.Nats.ReportInterval, "nats.report.interval", 60*time.Second, "report to console interval(60 seconds)")
 
 	return flags
 }
