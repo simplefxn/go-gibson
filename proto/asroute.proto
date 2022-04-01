@@ -8,9 +8,10 @@ message ASRoute {
       UPDATE = 0;
       DELETE = 1;
   }
-  Operation Op = 1;
-  string ASRouter = 2;
-  string NextAS = 3;
-  string Prefix = 4;
-  bytes Raw =5;
+  string Host = 1;
+  Operation Op = 2;
+  string ASRouter = 3;
+  string NextAS = 4;
+  string Prefix = 5;
+  bytes Raw =6;
 }

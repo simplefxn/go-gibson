@@ -16,10 +16,6 @@ windows: mod
 mod: 
 	go mod tidy
 
-.PHONY: proto 
-proto:
-	protoc -I=./proto --go_out=./pkg ./proto/*.proto
-
 .PHONY: update-go-deps
 update-go-deps:
 	@echo ">> updating Go dependencies"
@@ -33,3 +29,7 @@ endif
 
 .PHONY: dev 
 dev: update-go-deps push
+
+.PHONY: proto 
+proto:
+	protoc -I=./proto --go_out=./pkg ./proto/*.proto 
