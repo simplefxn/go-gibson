@@ -157,9 +157,10 @@ func GetConfigFileName() string {
 
 func init() {
 	globalConf = Service{
-		Sarama: sarama.NewConfig(),
-		Others: &SaramaComplex{},
-		Nats:   &Nats{},
+		Sarama:   sarama.NewConfig(),
+		Others:   &SaramaComplex{},
+		Nats:     &Nats{},
+		Postgres: &Postgres{},
 	}
 }
 
