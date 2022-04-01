@@ -33,6 +33,7 @@ type Service struct {
 	Sender   Sender
 	Receiver Receiver
 	Nats     *Nats
+	Postgres *Postgres
 }
 
 type Sender struct {
@@ -64,6 +65,13 @@ type Nats struct {
 	Publisher      Publisher     `yaml:"publisher"`
 	Subscriber     Subscriber    `yaml:"subscriber"`
 	ReportInterval time.Duration `yaml:"interval"`
+}
+
+type Postgres struct {
+	Username string `yaml:"username"`
+	Password string `yaml:"password"`
+	Host     string `yaml:"host"`
+	Database string `yaml:"database"`
 }
 
 type Publisher struct {

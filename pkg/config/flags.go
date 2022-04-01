@@ -276,3 +276,13 @@ func GetNatsSubscriberFlags() *pflag.FlagSet {
 	flags.StringVar(&globalConf.Nats.Subscriber.Topic, "nats.subscriber.topic", "topic1", "subscriber topic to nats server")
 	return flags
 }
+
+func GetPostgresFlags() *pflag.FlagSet {
+	flags := pflag.NewFlagSet("Postgres", pflag.ExitOnError)
+
+	flags.StringVar(&globalConf.Postgres.Username, "postgres.username", "root", "username to connect to database")
+	flags.StringVar(&globalConf.Postgres.Password, "postgres.password", "root", "password to connect to database")
+	flags.StringVar(&globalConf.Postgres.Host, "postgres.host", "root", "host or ip address of the database service")
+	flags.StringVar(&globalConf.Postgres.Database, "postgres.database", "mydatabase", "name of the database to connect to")
+	return flags
+}

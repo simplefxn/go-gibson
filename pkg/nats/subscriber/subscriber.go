@@ -19,7 +19,7 @@ type Gibson struct {
 }
 
 // New creates a new UDP sender
-func New(callback func(msg *nats.Msg)) (*Gibson, error) {
+func New(topic string, callback func(msg *nats.Msg)) (*Gibson, error) {
 	natsConfig := config.Get().Nats
 
 	natsTLSconfig := natsGibson.CreateTlsConfiguration(natsConfig)
@@ -36,7 +36,7 @@ func New(callback func(msg *nats.Msg)) (*Gibson, error) {
 		conn:     nc,
 		input:    make(chan []byte),
 		stats:    newStats(),
-		topic:    natsConfig.Subscriber.Topic,
+		topic:    topic,
 		callback: callback,
 	}
 
