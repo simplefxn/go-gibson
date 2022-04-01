@@ -3,7 +3,7 @@ package irouter;
 
 option go_package = "proto/irouter";
 
-message ASRoute {
+message iRoute {
   enum Operation {
       UPDATE = 0;
       WITHDRAWAL = 1;
