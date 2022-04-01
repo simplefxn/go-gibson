@@ -1,0 +1,20 @@
+syntax = "proto3";
+package irouter;
+
+option go_package = "proto/irouter";
+
+message ASRoute {
+  enum Operation {
+      UPDATE = 0;
+      WITHDRAWAL = 1;
+  }
+  string Peer = 1;
+  string PeerAS = 2;
+  string Host = 3;
+  Operation Op = 4;
+  string Path = 5;
+  string Community = 6;
+  string Origin = 7;
+  string Announcements = 8;
+  bytes Raw = 9;
+}
