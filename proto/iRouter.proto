@@ -12,9 +12,9 @@ message iRoute {
   string PeerAS = 2;
   string Host = 3;
   Operation Op = 4;
-  string Path = 5;
-  string Community = 6;
+  bytes Path = 5;
+  bytes Community = 6;
   string Origin = 7;
-  string Announcements = 8;
+  bytes Announcements = 8;
   bytes Raw = 9;
 }
