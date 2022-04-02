@@ -20,5 +20,6 @@ message iRoute {
   string Origin = 7;
   bytes Announcements = 8;
   bytes Withdrawals = 9;
-  bytes Raw = 10;
+  string Aggregator = 10;
+  bytes Raw = 11;
 }
