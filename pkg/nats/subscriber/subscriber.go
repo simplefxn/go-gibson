@@ -66,6 +66,7 @@ func (g *Gibson) Run(ctx context.Context) error {
 
 		for {
 			i, value, ok := reflect.Select(cases)
+			logger.Log.Debugf("Received msg on channel %d", i)
 			if ok {
 				msg := value.Interface().(*nats.Msg)
 				g.topics[i].cb(msg)
