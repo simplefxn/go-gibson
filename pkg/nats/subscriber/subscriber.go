@@ -66,8 +66,8 @@ func (g *Gibson) Run(ctx context.Context) error {
 		for {
 			i, value, ok := reflect.Select(cases)
 			if ok {
-				msg := value.Interface().(nats.Msg)
-				g.topics[i].callback(&msg)
+				msg := value.Interface().(*nats.Msg)
+				g.topics[i].callback(msg)
 			}
 
 		}
