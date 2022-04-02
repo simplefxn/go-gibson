@@ -24,7 +24,7 @@ type Topic struct {
 }
 
 // New creates a new UDP sender
-func New(topic string, callback func(msg *nats.Msg)) (*Gibson, error) {
+func New() (*Gibson, error) {
 	natsConfig := config.Get().Nats
 
 	natsTLSconfig := natsGibson.CreateTlsConfiguration(natsConfig)
