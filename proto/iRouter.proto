@@ -5,8 +5,11 @@ option go_package = "proto/irouter";
 
 message iRoute {
   enum Operation {
-      UPDATE = 0;
-      WITHDRAWAL = 1;
+      UPDATE_ANNOUNCEMENT = 0;
+      UPDATE_WITHDRAWAL = 1;
+      RIS_PEER_STATE = 2;
+      OPEN = 3;
+      NOTIFICATION = 4;
   }
   string Peer = 1;
   string PeerAS = 2;
@@ -16,5 +19,6 @@ message iRoute {
   bytes Community = 6;
   string Origin = 7;
   bytes Announcements = 8;
-  bytes Raw = 9;
+  bytes Withdrawals = 9;
+  bytes Raw = 10;
 }
