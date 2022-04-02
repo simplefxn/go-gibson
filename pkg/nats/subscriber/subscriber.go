@@ -18,9 +18,9 @@ type Gibson struct {
 }
 
 type Topic struct {
-	callback func(msg *nats.Msg)
-	name     string
-	chann    chan *nats.Msg
+	cb    func(msg *nats.Msg)
+	name  string
+	chann chan *nats.Msg
 }
 
 // New creates a new UDP sender
@@ -47,9 +47,9 @@ func New() (*Gibson, error) {
 
 func (g *Gibson) Add(topic string, callback func(msg *nats.Msg)) {
 	t := Topic{
-		name:     topic,
-		callback: callback,
-		chann:    make(chan *nats.Msg),
+		name:  topic,
+		cb:    callback,
+		chann: make(chan *nats.Msg),
 	}
 	g.topics = append(g.topics, t)
 }
@@ -60,6 +60,7 @@ func (g *Gibson) Run(ctx context.Context) error {
 	go func() {
 		cases := make([]reflect.SelectCase, len(g.topics))
 		for i, t := range g.topics {
+			logger.Log.Debugf("Listening in %s", t.name)
 			cases[i] = reflect.SelectCase{Dir: reflect.SelectRecv, Chan: reflect.ValueOf(t.chann)}
 		}
 
@@ -67,7 +68,7 @@ func (g *Gibson) Run(ctx context.Context) error {
 			i, value, ok := reflect.Select(cases)
 			if ok {
 				msg := value.Interface().(*nats.Msg)
-				g.topics[i].callback(msg)
+				g.topics[i].cb(msg)
 			}
 
 		}
