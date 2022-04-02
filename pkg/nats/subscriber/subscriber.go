@@ -2,6 +2,7 @@ package subscriber
 
 import (
 	"context"
+	"reflect"
 
 	"github.com/nats-io/nats.go"
 	"github.com/simplefxn/go-gibson/pkg/config"
@@ -11,11 +12,15 @@ import (
 
 // Gibson structure
 type Gibson struct {
-	topic    string
-	conn     *nats.Conn
-	input    chan []byte
-	stats    *Stats
+	conn   *nats.Conn
+	stats  *Stats
+	topics []Topic
+}
+
+type Topic struct {
 	callback func(msg *nats.Msg)
+	name     string
+	chann    chan *nats.Msg
 }
 
 // New creates a new UDP sender
@@ -33,38 +38,55 @@ func New(topic string, callback func(msg *nats.Msg)) (*Gibson, error) {
 	}
 
 	Gibson := &Gibson{
-		conn:     nc,
-		input:    make(chan []byte),
-		stats:    newStats(),
-		topic:    topic,
-		callback: callback,
+		conn:  nc,
+		stats: newStats(),
 	}
 
 	return Gibson, nil
 }
 
+func (g *Gibson) Add(topic string, callback func(msg *nats.Msg)) {
+	t := Topic{
+		name:     topic,
+		callback: callback,
+		chann:    make(chan *nats.Msg),
+	}
+	g.topics = append(g.topics, t)
+}
+
 // Run main loop for the receiver , call the callback for every message
 func (g *Gibson) Run(ctx context.Context) error {
 
-	msgChannel := make(chan *nats.Msg)
-
 	go func() {
-		for {
-			select {
-			case <-ctx.Done():
-				g.conn.Close()
-				return
-			case msg := <-msgChannel:
-				g.callback(msg)
-			}
+		cases := make([]reflect.SelectCase, len(g.topics))
+		for i, t := range g.topics {
+			cases[i] = reflect.SelectCase{Dir: reflect.SelectRecv, Chan: reflect.ValueOf(t.chann)}
 		}
+
+		for {
+			i, value, ok := reflect.Select(cases)
+			if ok {
+				msg := value.Interface().(nats.Msg)
+				g.topics[i].callback(&msg)
+			}
+
+		}
+
 	}()
 
-	// Simple Async Subscriber
-	g.conn.Subscribe(g.topic, func(m *nats.Msg) {
-		// Apply stats logic
-		msgChannel <- m
-	})
+	go func() {
+		<-ctx.Done()
+		g.conn.Close()
+
+	}()
+
+	for i := range g.topics {
+		// Simple Async Subscriber
+		g.conn.Subscribe(g.topics[i].name, func(m *nats.Msg) {
+			// Apply stats logic
+			g.topics[i].chann <- m
+		})
+	}
 
 	return nil
 }
