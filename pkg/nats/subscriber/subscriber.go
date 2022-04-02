@@ -82,6 +82,7 @@ func (g *Gibson) Run(ctx context.Context) error {
 
 	for i := range g.topics {
 		// Simple Async Subscriber
+		logger.Log.Debugf("Subscribing to channel %s", g.topics[i].name)
 		g.conn.Subscribe(g.topics[i].name, func(m *nats.Msg) {
 			// Apply stats logic
 			g.topics[i].chann <- m
