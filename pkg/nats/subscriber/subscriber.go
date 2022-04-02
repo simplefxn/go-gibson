@@ -2,7 +2,6 @@ package subscriber
 
 import (
 	"context"
-	"reflect"
 
 	"github.com/nats-io/nats.go"
 	"github.com/simplefxn/go-gibson/pkg/config"
@@ -56,25 +55,41 @@ func (g *Gibson) Add(topic string, callback func(msg *nats.Msg)) {
 
 // Run main loop for the receiver , call the callback for every message
 func (g *Gibson) Run(ctx context.Context) error {
+	/* TODO: This code is cleaner , but it does not work, it always return the index of the last topic
+	            entered in the list
+	   	go func() {
+	   		cases := make([]reflect.SelectCase, len(g.topics))
+	   		for i, t := range g.topics {
+	   			logger.Log.Debugf("Listening in %s", t.name)
+	   			cases[i] = reflect.SelectCase{Dir: reflect.SelectRecv, Chan: reflect.ValueOf(t.chann)}
+	   		}
 
-	go func() {
-		cases := make([]reflect.SelectCase, len(g.topics))
-		for i, t := range g.topics {
-			logger.Log.Debugf("Listening in %s", t.name)
-			cases[i] = reflect.SelectCase{Dir: reflect.SelectRecv, Chan: reflect.ValueOf(t.chann)}
-		}
+	   		for {
+	   			i, value, ok := reflect.Select(cases)
+	   			logger.Log.Debugf("Received msg on channel %d", i)
+	   			if ok {
+	   				msg := value.Interface().(*nats.Msg)
+	   				g.topics[i].cb(msg)
+	   			}
 
-		for {
-			i, value, ok := reflect.Select(cases)
-			logger.Log.Debugf("Received msg on channel %d", i)
-			if ok {
-				msg := value.Interface().(*nats.Msg)
-				g.topics[i].cb(msg)
+	   		}
+	   	}()
+	*/
+
+	for _, t := range g.topics {
+		go func(topic Topic) {
+			logger.Log.Debugf("Starting listening for topic %s", topic.name)
+			for {
+				select {
+				case <-ctx.Done():
+					close(topic.chann)
+					return
+				case msg := <-topic.chann:
+					topic.cb(msg)
+				}
 			}
-
-		}
-
-	}()
+		}(t)
+	}
 
 	go func() {
 		<-ctx.Done()
