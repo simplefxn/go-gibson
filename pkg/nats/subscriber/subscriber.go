@@ -77,6 +77,7 @@ func (g *Gibson) Run(ctx context.Context) error {
 	for subject, topic := range g.topics {
 		go func(subject string, topic Topic) {
 			logger.Log.Debugf("listening on topic %s", subject)
+			logger.Log.Debugf("Debug topic channel %v", topic.chann)
 			for {
 				select {
 				case <-ctx.Done():
