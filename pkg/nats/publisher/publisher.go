@@ -11,7 +11,6 @@ import (
 
 // Gibson structure
 type Gibson struct {
-	topic string
 	conn  *nats.Conn
 	input chan *Message
 	stats *Stats
@@ -40,7 +39,6 @@ func New() (*Gibson, error) {
 		conn:  nc,
 		input: make(chan *Message),
 		stats: newStats(),
-		topic: natsConfig.Publisher.Topic,
 	}
 
 	return Gibson, nil

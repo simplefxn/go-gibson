@@ -13,12 +13,11 @@ import (
 type Gibson struct {
 	conn   *nats.Conn
 	stats  *Stats
-	topics []Topic
+	topics map[string]Topic
 }
 
 type Topic struct {
 	cb    func(msg *nats.Msg)
-	name  string
 	chann chan *nats.Msg
 }
 
@@ -46,11 +45,10 @@ func New() (*Gibson, error) {
 
 func (g *Gibson) Add(topic string, callback func(msg *nats.Msg)) {
 	t := Topic{
-		name:  topic,
 		cb:    callback,
 		chann: make(chan *nats.Msg),
 	}
-	g.topics = append(g.topics, t)
+	g.topics[topic] = t
 }
 
 // Run main loop for the receiver , call the callback for every message
@@ -76,9 +74,9 @@ func (g *Gibson) Run(ctx context.Context) error {
 	   	}()
 	*/
 
-	for _, t := range g.topics {
-		go func(topic Topic) {
-			logger.Log.Debugf("Starting listening for topic %s", topic.name)
+	for subject, topic := range g.topics {
+		go func(subject string, topic Topic) {
+			logger.Log.Debugf("listening on topic %s", subject)
 			for {
 				select {
 				case <-ctx.Done():
@@ -88,7 +86,7 @@ func (g *Gibson) Run(ctx context.Context) error {
 					topic.cb(msg)
 				}
 			}
-		}(t)
+		}(subject, topic)
 	}
 
 	go func() {
@@ -97,12 +95,12 @@ func (g *Gibson) Run(ctx context.Context) error {
 
 	}()
 
-	for i := range g.topics {
+	for subject, topic := range g.topics {
 		// Simple Async Subscriber
-		logger.Log.Debugf("Subscribing to channel %s", g.topics[i].name)
-		g.conn.Subscribe(g.topics[i].name, func(m *nats.Msg) {
+		logger.Log.Debugf("Subscribing to channel %s", subject)
+		g.conn.Subscribe(subject, func(m *nats.Msg) {
 			// Apply stats logic
-			g.topics[i].chann <- m
+			topic.chann <- m
 		})
 	}
 
