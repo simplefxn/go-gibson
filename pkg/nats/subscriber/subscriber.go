@@ -11,32 +11,19 @@ import (
 
 // Gibson structure
 type Gibson struct {
-	conn   *nats.Conn
 	stats  *Stats
 	topics map[string]Topic
 }
 
 type Topic struct {
+	conn  *nats.Conn
 	cb    func(msg *nats.Msg)
 	chann chan *nats.Msg
 }
 
 // New creates a new UDP sender
 func New() (*Gibson, error) {
-	natsConfig := config.Get().Nats
-
-	natsTLSconfig := natsGibson.CreateTlsConfiguration(natsConfig)
-
-	// Connect to a server
-	logger.Log.Debugf("Connecting to nats@%s", natsConfig.URL)
-
-	nc, err := nats.Connect(natsConfig.URL, nats.Secure(natsTLSconfig))
-	if err != nil {
-		return nil, err
-	}
-
 	Gibson := &Gibson{
-		conn:   nc,
 		stats:  newStats(),
 		topics: make(map[string]Topic),
 	}
@@ -44,12 +31,25 @@ func New() (*Gibson, error) {
 	return Gibson, nil
 }
 
-func (g *Gibson) Add(topic string, callback func(msg *nats.Msg)) {
+func (g *Gibson) Add(topic string, callback func(msg *nats.Msg)) error {
+	natsConfig := config.Get().Nats
+	natsTLSconfig := natsGibson.CreateTlsConfiguration(natsConfig)
+	// Connect to a server
+	logger.Log.Debugf("Connecting to nats@%s for %s", natsConfig.URL, topic)
+
+	nc, err := nats.Connect(natsConfig.URL, nats.Secure(natsTLSconfig))
+	if err != nil {
+		return err
+	}
+
 	t := Topic{
+		conn:  nc,
 		cb:    callback,
 		chann: make(chan *nats.Msg),
 	}
 	g.topics[topic] = t
+
+	return nil
 }
 
 // Run main loop for the receiver , call the callback for every message
@@ -77,12 +77,15 @@ func (g *Gibson) Run(ctx context.Context) error {
 
 	for subject, topic := range g.topics {
 		go func(subject string, topic Topic) {
-			logger.Log.Debugf("listening on topic %s", subject)
-			logger.Log.Debugf("Debug topic channel %v", topic.chann)
+			logger.Log.Debugf("Subscribing to subject %s", subject)
+			topic.conn.Subscribe(subject, func(m *nats.Msg) {
+				topic.chann <- m
+			})
 			for {
 				select {
 				case <-ctx.Done():
 					close(topic.chann)
+					topic.conn.Close()
 					return
 				case msg := <-topic.chann:
 					topic.cb(msg)
@@ -90,21 +93,5 @@ func (g *Gibson) Run(ctx context.Context) error {
 			}
 		}(subject, topic)
 	}
-
-	go func() {
-		<-ctx.Done()
-		g.conn.Close()
-
-	}()
-
-	for subject, topic := range g.topics {
-		// Simple Async Subscriber
-		logger.Log.Debugf("Subscribing to channel %s", subject)
-		g.conn.Subscribe(subject, func(m *nats.Msg) {
-			// Apply stats logic
-			topic.chann <- m
-		})
-	}
-
 	return nil
 }
