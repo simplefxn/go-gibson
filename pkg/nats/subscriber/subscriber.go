@@ -36,8 +36,9 @@ func New() (*Gibson, error) {
 	}
 
 	Gibson := &Gibson{
-		conn:  nc,
-		stats: newStats(),
+		conn:   nc,
+		stats:  newStats(),
+		topics: make(map[string]Topic),
 	}
 
 	return Gibson, nil
