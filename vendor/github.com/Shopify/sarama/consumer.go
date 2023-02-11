@@ -96,11 +96,15 @@ type Consumer interface {
 	ResumeAll()
 }
 
+// max time to wait for more partition subscriptions
+const partitionConsumersBatchTimeout = 100 * time.Millisecond
+
 type consumer struct {
 	conf            *Config
 	children        map[string]map[int32]*partitionConsumer
 	brokerConsumers map[*Broker]*brokerConsumer
 	client          Client
+	metricRegistry  metrics.Registry
 	lock            sync.Mutex
 }
 
@@ -133,12 +137,14 @@ func newConsumer(client Client) (Consumer, error) {
 		conf:            client.Config(),
 		children:        make(map[string]map[int32]*partitionConsumer),
 		brokerConsumers: make(map[*Broker]*brokerConsumer),
+		metricRegistry:  newCleanupRegistry(client.Config().MetricRegistry),
 	}
 
 	return c, nil
 }
 
 func (c *consumer) Close() error {
+	c.metricRegistry.UnregisterAll()
 	return c.client.Close()
 }
 
@@ -159,6 +165,7 @@ func (c *consumer) ConsumePartition(topic string, partition int32, offset int64)
 		messages:             make(chan *ConsumerMessage, c.conf.ChannelBufferSize),
 		errors:               make(chan *ConsumerError, c.conf.ChannelBufferSize),
 		feeder:               make(chan *FetchResponse, 1),
+		leaderEpoch:          invalidLeaderEpoch,
 		preferredReadReplica: invalidPreferredReplicaID,
 		trigger:              make(chan none, 1),
 		dying:                make(chan none),
@@ -169,9 +176,8 @@ func (c *consumer) ConsumePartition(topic string, partition int32, offset int64)
 		return nil, err
 	}
 
-	var leader *Broker
-	var err error
-	if leader, err = c.client.Leader(child.topic, child.partition); err != nil {
+	leader, epoch, err := c.client.LeaderAndEpoch(child.topic, child.partition)
+	if err != nil {
 		return nil, err
 	}
 
@@ -182,6 +188,7 @@ func (c *consumer) ConsumePartition(topic string, partition int32, offset int64)
 	go withRecover(child.dispatcher)
 	go withRecover(child.responseFeeder)
 
+	child.leaderEpoch = epoch
 	child.broker = c.refBrokerConsumer(leader)
 	child.broker.input <- child
 
@@ -394,6 +401,7 @@ type partitionConsumer struct {
 	errors   chan *ConsumerError
 	feeder   chan *FetchResponse
 
+	leaderEpoch          int32
 	preferredReadReplica int32
 
 	trigger, dying chan none
@@ -457,11 +465,11 @@ func (child *partitionConsumer) dispatcher() {
 	close(child.feeder)
 }
 
-func (child *partitionConsumer) preferredBroker() (*Broker, error) {
+func (child *partitionConsumer) preferredBroker() (*Broker, int32, error) {
 	if child.preferredReadReplica >= 0 {
 		broker, err := child.consumer.client.Broker(child.preferredReadReplica)
 		if err == nil {
-			return broker, nil
+			return broker, child.leaderEpoch, nil
 		}
 		Logger.Printf(
 			"consumer/%s/%d failed to find active broker for preferred read replica %d - will fallback to leader",
@@ -474,7 +482,7 @@ func (child *partitionConsumer) preferredBroker() (*Broker, error) {
 	}
 
 	// if preferred replica cannot be found fallback to leader
-	return child.consumer.client.Leader(child.topic, child.partition)
+	return child.consumer.client.LeaderAndEpoch(child.topic, child.partition)
 }
 
 func (child *partitionConsumer) dispatch() error {
@@ -482,13 +490,13 @@ func (child *partitionConsumer) dispatch() error {
 		return err
 	}
 
-	broker, err := child.preferredBroker()
+	broker, epoch, err := child.preferredBroker()
 	if err != nil {
 		return err
 	}
 
+	child.leaderEpoch = epoch
 	child.broker = child.consumer.refBrokerConsumer(broker)
-
 	child.broker.input <- child
 
 	return nil
@@ -675,13 +683,9 @@ func (child *partitionConsumer) parseRecords(batch *RecordBatch) ([]*ConsumerMes
 }
 
 func (child *partitionConsumer) parseResponse(response *FetchResponse) ([]*ConsumerMessage, error) {
-	var (
-		metricRegistry          = child.conf.MetricRegistry
-		consumerBatchSizeMetric metrics.Histogram
-	)
-
-	if metricRegistry != nil {
-		consumerBatchSizeMetric = getOrRegisterHistogram("consumer-batch-size", metricRegistry)
+	var consumerBatchSizeMetric metrics.Histogram
+	if child.consumer != nil && child.consumer.metricRegistry != nil {
+		consumerBatchSizeMetric = getOrRegisterHistogram("consumer-batch-size", child.consumer.metricRegistry)
 	}
 
 	// If request was throttled and empty we log and return without error
@@ -697,7 +701,7 @@ func (child *partitionConsumer) parseResponse(response *FetchResponse) ([]*Consu
 		return nil, ErrIncompleteResponse
 	}
 
-	if block.Err != ErrNoError {
+	if !errors.Is(block.Err, ErrNoError) {
 		return nil, block.Err
 	}
 
@@ -706,7 +710,9 @@ func (child *partitionConsumer) parseResponse(response *FetchResponse) ([]*Consu
 		return nil, err
 	}
 
-	consumerBatchSizeMetric.Update(int64(nRecs))
+	if consumerBatchSizeMetric != nil {
+		consumerBatchSizeMetric.Update(int64(nRecs))
+	}
 
 	if block.PreferredReadReplica != invalidPreferredReplicaID {
 		child.preferredReadReplica = block.PreferredReadReplica
@@ -850,7 +856,6 @@ type brokerConsumer struct {
 	input            chan *partitionConsumer
 	newSubscriptions chan []*partitionConsumer
 	subscriptions    map[*partitionConsumer]none
-	wait             chan none
 	acks             sync.WaitGroup
 	refs             int
 }
@@ -861,7 +866,6 @@ func (c *consumer) newBrokerConsumer(broker *Broker) *brokerConsumer {
 		broker:           broker,
 		input:            make(chan *partitionConsumer),
 		newSubscriptions: make(chan []*partitionConsumer),
-		wait:             make(chan none),
 		subscriptions:    make(map[*partitionConsumer]none),
 		refs:             0,
 	}
@@ -875,54 +879,56 @@ func (c *consumer) newBrokerConsumer(broker *Broker) *brokerConsumer {
 // The subscriptionManager constantly accepts new subscriptions on `input` (even when the main subscriptionConsumer
 // goroutine is in the middle of a network request) and batches it up. The main worker goroutine picks
 // up a batch of new subscriptions between every network request by reading from `newSubscriptions`, so we give
-// it nil if no new subscriptions are available. We also write to `wait` only when new subscriptions is available,
-// so the main goroutine can block waiting for work if it has none.
+// it nil if no new subscriptions are available.
 func (bc *brokerConsumer) subscriptionManager() {
-	var buffer []*partitionConsumer
+	defer close(bc.newSubscriptions)
 
 	for {
-		if len(buffer) > 0 {
-			select {
-			case event, ok := <-bc.input:
-				if !ok {
-					goto done
-				}
-				buffer = append(buffer, event)
-			case bc.newSubscriptions <- buffer:
-				buffer = nil
-			case bc.wait <- none{}:
+		var partitionConsumers []*partitionConsumer
+
+		// Check for any partition consumer asking to subscribe if there aren't
+		// any, trigger the network request (to fetch Kafka messages) by sending "nil" to the
+		// newSubscriptions channel
+		select {
+		case pc, ok := <-bc.input:
+			if !ok {
+				return
 			}
-		} else {
+			partitionConsumers = append(partitionConsumers, pc)
+		case bc.newSubscriptions <- nil:
+			continue
+		}
+
+		// drain input of any further incoming subscriptions
+		timer := time.NewTimer(partitionConsumersBatchTimeout)
+		for batchComplete := false; !batchComplete; {
 			select {
-			case event, ok := <-bc.input:
-				if !ok {
-					goto done
-				}
-				buffer = append(buffer, event)
-			case bc.newSubscriptions <- nil:
+			case pc := <-bc.input:
+				partitionConsumers = append(partitionConsumers, pc)
+			case <-timer.C:
+				batchComplete = true
 			}
 		}
-	}
+		timer.Stop()
 
-done:
-	close(bc.wait)
-	if len(buffer) > 0 {
-		bc.newSubscriptions <- buffer
+		Logger.Printf(
+			"consumer/broker/%d accumulated %d new subscriptions\n",
+			bc.broker.ID(), len(partitionConsumers))
+
+		bc.newSubscriptions <- partitionConsumers
 	}
-	close(bc.newSubscriptions)
 }
 
 // subscriptionConsumer ensures we will get nil right away if no new subscriptions is available
+// this is a the main loop that fetches Kafka messages
 func (bc *brokerConsumer) subscriptionConsumer() {
-	<-bc.wait // wait for our first piece of work
-
 	for newSubscriptions := range bc.newSubscriptions {
 		bc.updateSubscriptions(newSubscriptions)
 
 		if len(bc.subscriptions) == 0 {
 			// We're about to be shut down or we're about to receive more subscriptions.
-			// Either way, the signal just hasn't propagated to our goroutine yet.
-			<-bc.wait
+			// Take a small nap to avoid burning the CPU.
+			time.Sleep(partitionConsumersBatchTimeout)
 			continue
 		}
 
@@ -933,8 +939,24 @@ func (bc *brokerConsumer) subscriptionConsumer() {
 			return
 		}
 
+		// if there isn't response, it means that not fetch was made
+		// so we don't need to handle any response
+		if response == nil {
+			continue
+		}
+
 		bc.acks.Add(len(bc.subscriptions))
 		for child := range bc.subscriptions {
+			if _, ok := response.Blocks[child.topic]; !ok {
+				bc.acks.Done()
+				continue
+			}
+
+			if _, ok := response.Blocks[child.topic][child.partition]; !ok {
+				bc.acks.Done()
+				continue
+			}
+
 			child.feeder <- response
 		}
 		bc.acks.Wait()
@@ -967,7 +989,7 @@ func (bc *brokerConsumer) handleResponses() {
 		child.responseResult = nil
 
 		if result == nil {
-			if preferredBroker, err := child.preferredBroker(); err == nil {
+			if preferredBroker, _, err := child.preferredBroker(); err == nil {
 				if bc.broker.ID() != preferredBroker.ID() {
 					// not an error but needs redispatching to consume from preferred replica
 					Logger.Printf(
@@ -983,25 +1005,29 @@ func (bc *brokerConsumer) handleResponses() {
 		// Discard any replica preference.
 		child.preferredReadReplica = invalidPreferredReplicaID
 
-		switch result {
-		case errTimedOut:
+		if errors.Is(result, errTimedOut) {
 			Logger.Printf("consumer/broker/%d abandoned subscription to %s/%d because consuming was taking too long\n",
 				bc.broker.ID(), child.topic, child.partition)
 			delete(bc.subscriptions, child)
-		case ErrOffsetOutOfRange:
+		} else if errors.Is(result, ErrOffsetOutOfRange) {
 			// there's no point in retrying this it will just fail the same way again
 			// shut it down and force the user to choose what to do
 			child.sendError(result)
 			Logger.Printf("consumer/%s/%d shutting down because %s\n", child.topic, child.partition, result)
 			close(child.trigger)
 			delete(bc.subscriptions, child)
-		case ErrUnknownTopicOrPartition, ErrNotLeaderForPartition, ErrLeaderNotAvailable, ErrReplicaNotAvailable:
+		} else if errors.Is(result, ErrUnknownTopicOrPartition) ||
+			errors.Is(result, ErrNotLeaderForPartition) ||
+			errors.Is(result, ErrLeaderNotAvailable) ||
+			errors.Is(result, ErrReplicaNotAvailable) ||
+			errors.Is(result, ErrFencedLeaderEpoch) ||
+			errors.Is(result, ErrUnknownLeaderEpoch) {
 			// not an error, but does need redispatching
 			Logger.Printf("consumer/broker/%d abandoned subscription to %s/%d because %s\n",
 				bc.broker.ID(), child.topic, child.partition, result)
 			child.trigger <- none{}
 			delete(bc.subscriptions, child)
-		default:
+		} else {
 			// dunno, tell the user and try redispatching
 			child.sendError(result)
 			Logger.Printf("consumer/broker/%d abandoned subscription to %s/%d because %s\n",
@@ -1023,7 +1049,8 @@ func (bc *brokerConsumer) abort(err error) {
 
 	for newSubscriptions := range bc.newSubscriptions {
 		if len(newSubscriptions) == 0 {
-			<-bc.wait
+			// Take a small nap to avoid burning the CPU.
+			time.Sleep(partitionConsumersBatchTimeout)
 			continue
 		}
 		for _, child := range newSubscriptions {
@@ -1033,6 +1060,8 @@ func (bc *brokerConsumer) abort(err error) {
 	}
 }
 
+// fetchResponse can be nil if no fetch is made, it can occur when
+// all partitions are paused
 func (bc *brokerConsumer) fetchNewMessages() (*FetchResponse, error) {
 	request := &FetchRequest{
 		MinBytes:    bc.consumer.conf.Consumer.Fetch.Min,
@@ -1070,8 +1099,13 @@ func (bc *brokerConsumer) fetchNewMessages() (*FetchResponse, error) {
 
 	for child := range bc.subscriptions {
 		if !child.IsPaused() {
-			request.AddBlock(child.topic, child.partition, child.offset, child.fetchSize)
+			request.AddBlock(child.topic, child.partition, child.offset, child.fetchSize, child.leaderEpoch)
 		}
+	}
+
+	// avoid to fetch when there is no block
+	if len(request.blocks) == 0 {
+		return nil, nil
 	}
 
 	return bc.broker.Fetch(request)
